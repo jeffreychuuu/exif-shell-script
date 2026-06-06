@@ -143,7 +143,7 @@ case $LAB_CHOICE in
 esac
 
 if [ -z "$USER_LAB" ]; then
-    echo "❌ ❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
+    echo "❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
 fi
 
 # 5. 要求輸入相機製造商與型號 (Make & Model)
@@ -155,53 +155,50 @@ echo -n "📷 請輸入相機型號 [預設: Leica MP]: "
 read USER_MODEL
 USER_MODEL=${USER_MODEL:-"Leica MP"}
 
+# 拍攝日期輸入
+echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則保留原狀]: "
+read USER_DATE
+
+# 處理用於檔名的日期格式
+if [ -n "$USER_DATE" ]; then
+    FILE_DATE="${USER_DATE//:/}" # 抽走冒號，變成 20260520
+else
+    FILE_DATE=$(date +%Y%m%d)    # 若無輸入，預設用今日日期
+fi
+
 
 echo "\n----------------------------------------"
-echo "正在準備寫入以下中繼資料："
+echo "正在準備寫入以下中繼資料與重新命名："
 echo "相機製造商: $USER_MAKE"
 echo "相機型號: $USER_MODEL"
 echo "作者名稱: $AUTHOR_NAME"
 echo "菲林型號: $USER_FILM"
 echo "ISO 設定: $USER_ISO"
 echo "鏡頭型號: $LENS_NAME"
-echo "鏡頭焦距: ${FOCAL_LENGTH:-未指定} mm"
-echo "最大光圈: F/${MAX_APERTURE:-未指定}"
 echo "沖掃公司: $USER_LAB"
-echo "Credit 欄位: Processed & Scanned by $USER_LAB"
+echo "EXIF 日期: ${USER_DATE:-隨檔案預設 (每張遞增功能僅在指定日期時啟用)}"
+echo "檔名日期: $FILE_DATE"
 echo "目標資料夾: $TARGET_DIR"
 echo "----------------------------------------\n"
 
-# 6. 呼叫 ExifTool 執行批次寫入
-/opt/homebrew/bin/exiftool -overwrite_original \
-    -Make="$USER_MAKE" \
-    -Model="$USER_MODEL" \
-    -Artist="$AUTHOR_NAME" \
-    -Creator="$AUTHOR_NAME" \
-    -ISO="$USER_ISO" \
-    -LensModel="$LENS_NAME" \
-    -Lens="$LENS_NAME" \
-    ${FOCAL_LENGTH:+-FocalLength="$FOCAL_LENGTH"} \
-    ${MAX_APERTURE:+-MaxApertureValue="$MAX_APERTURE"} \
-    -UserComment="Film Stock: $USER_FILM" \
-    -XMP:Label="$USER_FILM" \
-    -Credit="Processed & Scanned by $USER_LAB" \
-    -Source="$USER_LAB" \
-    -ext jpg -ext jpeg -ext png -ext tiff -ext dng "$TARGET_DIR"
-
-echo "✨ EXIF 與菲林數據已成功批次寫入完成。"
-
 # ==========================================
-# ─── 7. 自動重新命名相片檔案 (全新命名邏輯) ───
+# ─── 6. 核心處理迴圈 (排序 -> 寫入 EXIF -> 重新命名) ───
 # ==========================================
-echo "\n🚚 正在依照指定格式重新命名相片檔案..."
+echo "🚚 正在開始處理相片檔案..."
 
-# 處理命名所需的 Camel Case 字串變數
+# 預先處理命名所需的 Camel Case 字串變數
 CAMEL_LENS="${${(C)LENS_NAME}//[^a-zA-Z0-9]/}"
 CAMEL_FILM="${${(C)USER_FILM}//[^a-zA-Z0-9]/}"
 CAMEL_ARTIST="${${(C)AUTHOR_NAME}//[^a-zA-Z0-9]/}"
 
-RENAMED_COUNT=0
+PROCESSED_COUNT=0
 
+# 設定時間基準點：中午 12 點正
+BASE_HOUR=12
+BASE_MIN=0
+BASE_SEC=0
+
+# Zsh 預設展開就會跟返 filename 由小至大排列 (Alphabetical Ascending)
 for file in "$TARGET_DIR"/*; do
     # 確保是檔案而非目錄
     [ -f "$file" ] || continue
@@ -214,13 +211,63 @@ for file in "$TARGET_DIR"/*; do
         base_name="${file:t}"
         dir_name="${file:h}"
         
-        # 組合新檔名：$LensName(CamelCase)_$FilmStockName(CamelCase)_$Artist(CamelCase)_$originalFileName
-        new_name="${CAMEL_LENS}_${CAMEL_FILM}_${CAMEL_ARTIST}_${base_name}"
+        # 1. 建立該檔案的 ExifTool 基本參數陣列
+        exif_args=(
+            -overwrite_original
+            -Make="$USER_MAKE"
+            -Model="$USER_MODEL"
+            -Artist="$AUTHOR_NAME"
+            -Creator="$AUTHOR_NAME"
+            -ISO="$USER_ISO"
+            -LensModel="$LENS_NAME"
+            -Lens="$LENS_NAME"
+            -UserComment="Film Stock: $USER_FILM"
+            -XMP:Label="$USER_FILM"
+            -Credit="Processed & Scanned by $USER_LAB"
+            -Source="$USER_LAB"
+        )
         
-        # 執行更名
+        # 選擇性加入焦距與光圈
+        [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
+        [[ -n "$MAX_APERTURE" ]] && exif_args+=(-MaxApertureValue="$MAX_APERTURE")
+        
+        # 2. 如果使用者有指定日期，計算「每張加 1 分鐘」的精準進位時間
+        if [ -n "$USER_DATE" ]; then
+            SEC=$BASE_SEC
+            MIN=$(( BASE_MIN + PROCESSED_COUNT ))  # 每張相片直接加 1 分鐘
+            HR=$(( BASE_HOUR + MIN / 60 ))        # 超過 60 分鐘自動進位到小時
+            MIN=$(( MIN % 60 ))
+            
+            # 格式化為 HH:MM:SS (補零)
+            CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
+            
+            exif_args+=(
+                -DateTimeOriginal="$USER_DATE $CURRENT_TIME"
+                -CreateDate="$USER_DATE $CURRENT_TIME"
+            )
+        fi
+        
+        # 3. 呼叫 ExifTool 寫入中繼資料
+        /opt/homebrew/bin/exiftool "${exif_args[@]}" "$file" > /dev/null
+        
+        # 4. 生成雙位數流水號 (01, 02, 03...)
+        SERIAL_NUM=$(printf "%02d" $((PROCESSED_COUNT + 1)))
+        
+        # 5. 組合最終新檔名
+        new_name="${CAMEL_LENS}_${CAMEL_FILM}_${CAMEL_ARTIST}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
+        
+        # 6. 執行更名
         mv "$file" "$dir_name/$new_name"
-        ((RENAMED_COUNT++))
+        
+        ((PROCESSED_COUNT++))
+        
+        # 即時顯示進度提示
+        if [ -n "$USER_DATE" ]; then
+            echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (拍攝時間: $CURRENT_TIME)"
+        else
+            echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (保持原稿時間)"
+        fi
     fi
 done
 
-echo "🎉 重新命名完成，共處理了 $RENAMED_COUNT 張相片。"
+echo "\n🎉 全卷處理完畢！共成功同步 EXIF 並生成標準化檔名共 $PROCESSED_COUNT 張相片。"
