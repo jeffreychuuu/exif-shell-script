@@ -13,7 +13,8 @@ echo "✍️ 請選擇作者 (Author):"
 echo "1) Jeffrey Chu [預設]"
 echo "2) Roger Chan"
 echo "3) Tracy Tong"
-echo -n "請輸入選項數字 (1, 2 或 3，直接 Enter 則為 1): "
+echo "4) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-4，直接 Enter 則為 1): "
 read AUTHOR_CHOICE
 
 AUTHOR_CHOICE=${AUTHOR_CHOICE:-1}
@@ -21,8 +22,17 @@ case $AUTHOR_CHOICE in
     1) AUTHOR_NAME="Jeffrey Chu" ;;
     2) AUTHOR_NAME="Roger Chan" ;;
     3) AUTHOR_NAME="Tracy Tong" ;;
+    4)
+        echo -n "✍️ 請輸入自訂作者名稱: "
+        read CUSTOM_ARTIST
+        AUTHOR_NAME=$CUSTOM_ARTIST
+        ;;
     *) echo "❌ 錯誤: 無效的作者選項。"; exit 1 ;;
 esac
+
+if [ -z "$AUTHOR_NAME" ]; then
+    echo "❌ 錯誤: 作者名稱不能為空。"; exit 1
+fi
 
 # 2. 要求選擇相機 (Camera) 與 3. 連動鏡頭選擇 (Lens)
 echo "\n📷 請選擇相機 (Camera):"
@@ -105,10 +115,10 @@ if [ "$NEED_CUSTOM_LENS" -eq 1 ]; then
 fi
 
 if [ -z "$LENS_NAME" ]; then
-    echo "❌ 錯誤: 鏡頭型號不能為空. "; exit 1
+    echo "❌ 錯誤: 鏡頭型號不能為空。" ; exit 1
 fi
 
-# 4. 要求選擇菲林型號並自動判定 ISO (已將 Kodak ColorPlus 200 加至 Gold 下方)
+# 4. 要求選擇菲林型號並自動判定 ISO
 echo "\n🎞️ 請選擇使用的菲林型號 (Film Stock):"
 echo "1) Kodak Ultramax 400 [預設]"
 echo "2) Kodak Gold 200"
