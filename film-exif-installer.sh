@@ -194,11 +194,11 @@ fi
 echo "\n🏢 請選擇沖掃公司:"
 echo "1) DOT-WELL Photo Workshop [預設]"
 echo "2) Megatoni Production"
-echo "3) TrueFace Pro Lab [金鈿(真面目)]"
-echo "4) Photo Garden [金藝]"
+echo "3) TrueFace Pro Lab 金鈿(真面目)"
+echo "4) Photo Garden 金藝"
 echo "5) HK Camera"
 echo "6) Showa"
-echo "7) Colorluxe Express [彩圖麗]"
+echo "7) Colorluxe Express 彩圖麗"
 echo "8) 其他 (自行輸入 Free text)"
 echo -n "請輸入選項數字 (1-8，直接 Enter 則為 1): "
 read LAB_CHOICE
@@ -207,11 +207,11 @@ LAB_CHOICE=${LAB_CHOICE:-1}
 case $LAB_CHOICE in
     1) USER_LAB="DOT-WELL Photo Workshop" ;;
     2) USER_LAB="Megatoni Production" ;;
-    3) USER_LAB="TrueFace Pro Lab [金鈿(真面目)]" ;;
-    4) USER_LAB="Photo Garden [金藝]" ;;
+    3) USER_LAB="TrueFace Pro Lab 金鈿(真面目)" ;;
+    4) USER_LAB="Photo Garden 金藝" ;;
     5) USER_LAB="HK Camera" ;;
     6) USER_LAB="Showa" ;;
-    7) USER_LAB="Colorluxe Express [彩圖麗]" ;;
+    7) USER_LAB="Colorluxe Express 彩圖麗" ;;
     8)
         echo -n "✍️ 請輸入自訂沖掃公司名稱: "
         read CUSTOM_LAB
