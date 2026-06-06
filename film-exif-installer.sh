@@ -24,45 +24,91 @@ case $AUTHOR_CHOICE in
     *) echo "❌ 錯誤: 無效的作者選項。"; exit 1 ;;
 esac
 
-# 2. 要求選擇鏡頭 (Lens)
-echo "\n📂 請選擇使用的鏡頭:"
-echo "1) Leica Summarit-M 35mm F/2.5 [預設]"
-echo "2) Leica Elmarit-M 28mm F/2.8"
+# 2. 要求選擇相機 (Camera) 與 3. 連動鏡頭選擇 (Lens)
+echo "\n📷 請選擇相機 (Camera):"
+echo "1) Leica MP [預設]"
+echo "2) Olympus OM-2Sp"
 echo "3) 其他 (自行輸入 Free text)"
 echo -n "請輸入選項數字 (1-3，直接 Enter 則為 1): "
-read LENS_CHOICE
+read CAMERA_CHOICE
+CAMERA_CHOICE=${CAMERA_CHOICE:-1}
 
-LENS_CHOICE=${LENS_CHOICE:-1}
-case $LENS_CHOICE in
+NEED_CUSTOM_LENS=0
+
+case $CAMERA_CHOICE in
     1)
-        LENS_NAME="Leica Summarit-M 35mm F/2.5"
-        FOCAL_LENGTH="35"
-        MAX_APERTURE="2.5"
+        USER_MAKE="Leica Camera AG"
+        USER_MODEL="Leica MP"
+        
+        # Leica 鏡頭專屬選單
+        echo "\n📂 請選擇使用的 Leica 鏡頭:"
+        echo "1) Leica Summarit-M 35mm F/2.5 [預設]"
+        echo "2) Leica Elmarit-M 28mm F/2.8"
+        echo "3) 其他 (自行輸入 Free text)"
+        echo -n "請輸入選項數字 (1-3，直接 Enter 則為 1): "
+        read LENS_CHOICE
+        LENS_CHOICE=${LENS_CHOICE:-1}
+        
+        case $LENS_CHOICE in
+            1) LENS_NAME="Leica Summarit-M 35mm F/2.5"; FOCAL_LENGTH="35"; MAX_APERTURE="2.5" ;;
+            2) LENS_NAME="Leica Elmarit-M 28mm F/2.8"; FOCAL_LENGTH="28"; MAX_APERTURE="2.8" ;;
+            3) NEED_CUSTOM_LENS=1 ;;
+            *) echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1 ;;
+        esac
         ;;
     2)
-        LENS_NAME="Leica Elmarit-M 28mm F/2.8"
-        FOCAL_LENGTH="28"
-        MAX_APERTURE="2.8"
+        USER_MAKE="Olympus"
+        USER_MODEL="Olympus OM-2Sp"
+        
+        # Olympus 鏡頭專屬選單
+        echo "\n📂 請選擇使用的 Olympus 鏡頭:"
+        echo "1) OM-System Zuiko 50mm F/1.4 [預設]"
+        echo "2) 其他 (自行輸入 Free text)"
+        echo -n "請輸入選項數字 (1-2，直接 Enter 則為 1): "
+        read LENS_CHOICE
+        LENS_CHOICE=${LENS_CHOICE:-1}
+        
+        case $LENS_CHOICE in
+            1) LENS_NAME="OM-System Zuiko 50mm F/1.4"; FOCAL_LENGTH="50"; MAX_APERTURE="1.4" ;;
+            2) NEED_CUSTOM_LENS=1 ;;
+            *) echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1 ;;
+        esac
         ;;
     3)
-        echo -n "✍️ 請輸入自訂鏡頭型號 (例如 Leica Summicron-M 50mm f/2): "
-        read CUSTOM_LENS
-        LENS_NAME=$CUSTOM_LENS
+        echo -n "📷 請輸入自訂相機製造商 [ Make，例如 Fujifilm ]: "
+        read USER_MAKE
+        USER_MAKE=${USER_MAKE:-"Unknown Make"}
         
-        echo -n "📏 請輸入焦距數值 (純數字，例如 50，可直接 Enter 跳過): "
-        read FOCAL_LENGTH
+        echo -n "📷 請輸入相機型號 [ Model，例如 GA645 ]: "
+        read USER_MODEL
+        USER_MODEL=${USER_MODEL:-"Unknown Model"}
         
-        echo -n "🎚️ 請輸入最大光圈值 (數字/小數，例如 2.0，可直接 Enter 跳過): "
-        read MAX_APERTURE
+        # 自訂相機不進行 Checking，直接開啟 Free text 鏡頭輸入
+        NEED_CUSTOM_LENS=1
         ;;
-    *) echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1 ;;
+    *)
+        echo "❌ 錯誤: 無效的相機選項。"; exit 1
+        ;;
 esac
+
+# 處理鏡頭的 Free text 輸入
+if [ "$NEED_CUSTOM_LENS" -eq 1 ]; then
+    echo -n "✍️ 請輸入自訂鏡頭型號 (例如 Leica Summicron-M 50mm f/2): "
+    read CUSTOM_LENS
+    LENS_NAME=$CUSTOM_LENS
+    
+    echo -n "📏 請輸入焦距數值 (純數字，例如 50，可直接 Enter 跳過): "
+    read FOCAL_LENGTH
+    
+    echo -n "🎚️ 請輸入最大光圈值 (數字/小數，例如 2.0，可直接 Enter 跳過): "
+    read MAX_APERTURE
+fi
 
 if [ -z "$LENS_NAME" ]; then
     echo "❌ 錯誤: 鏡頭型號不能為空。"; exit 1
 fi
 
-# 3. 要求選擇菲林型號並自動判定 ISO
+# 4. 要求選擇菲林型號並自動判定 ISO
 echo "\n🎞️ 請選擇使用的菲林型號 (Film Stock):"
 echo "1) Kodak Ultramax 400 [預設]"
 echo "2) Kodak Gold 200"
@@ -118,7 +164,7 @@ if [ -z "$USER_FILM" ]; then
     echo "❌ 錯誤: 菲林型號不能為空。"; exit 1
 fi
 
-# 4. 要求選擇或輸入沖掃公司名稱
+# 5. 要求選擇或輸入沖掃公司名稱
 echo "\n🏢 請選擇沖掃公司:"
 echo "1) DOT-WELL Photo Workshop [預設]"
 echo "2) Megatoni Production"
@@ -152,23 +198,14 @@ if [ -z "$USER_LAB" ]; then
     echo "❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
 fi
 
-# 5. 要求輸入相機製造商與型號 (Make & Model)
-echo -n "\n📷 請輸入相機製造商 [預設: Leica Camera AG]: "
-read USER_MAKE
-USER_MAKE=${USER_MAKE:-"Leica Camera AG"}
-
-echo -n "📷 請輸入相機型號 [預設: Leica MP]: "
-read USER_MODEL
-USER_MODEL=${USER_MODEL:-"Leica MP"}
-
-# 拍攝日期輸入
+# 6. 拍攝日期輸入
 echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則預設為今日]: "
 read USER_DATE
 
-# 若直接按 Enter 留空，自動將變數填入今日日期（格式 YYYY:MM:DD）
+# 若直接按 Enter 留空，自動將變數填入今日日期
 USER_DATE=${USER_DATE:-$(date +%Y:%m:%d)}
 
-# 處理用於檔名的日期格式（抽走冒號，例如 20260606）
+# 處理用於檔名的日期格式（抽走冒號）
 FILE_DATE="${USER_DATE//:/}"
 
 
@@ -180,14 +217,16 @@ echo "作者名稱: $AUTHOR_NAME"
 echo "菲林型號: $USER_FILM"
 echo "ISO 設定: $USER_ISO"
 echo "鏡頭型號: $LENS_NAME"
+echo "鏡頭焦距: ${FOCAL_LENGTH:-未指定} mm"
+echo "最大光圈: F/${MAX_APERTURE:-未指定}"
 echo "沖掃公司: $USER_LAB"
-echo "EXIF 日期: $USER_DATE (不論自訂或今日，均會執行遞增並寫入)"
+echo "EXIF 日期: $USER_DATE (每張相片拍攝時間遞增 1 分鐘)"
 echo "檔名日期: $FILE_DATE"
 echo "目標資料夾: $TARGET_DIR"
 echo "----------------------------------------\n"
 
 # ==========================================
-# ─── 6. 核心處理迴圈 (排序 -> 寫入 EXIF -> 重新命名) ───
+# ─── 7. 核心處理迴圈 (排序 -> 寫入 EXIF -> 重新命名) ───
 # ==========================================
 echo "🚚 正在開始處理相片檔案..."
 
@@ -205,24 +244,19 @@ BASE_SEC=0
 
 # Zsh 預設展開就會跟返 filename 由小至大排列 (Alphabetical Ascending)
 for file in "$TARGET_DIR"/*; do
-    # 確保是檔案而非目錄
     [ -f "$file" ] || continue
-    
-    # 取得副檔名並轉為小寫
     ext="${file:e:l}"
     
-    # 僅處理指定的相片格式
     if [[ "$ext" == "jpg" || "$ext" == "jpeg" || "$ext" == "png" || "$ext" == "tiff" || "$ext" == "dng" ]]; then
         base_name="${file:t}"
         dir_name="${file:h}"
         
         # 1. 計算「每張加 1 分鐘」的精準進位時間
         SEC=$BASE_SEC
-        MIN=$(( BASE_MIN + PROCESSED_COUNT ))  # 每張相片直接加 1 分鐘
-        HR=$(( BASE_HOUR + MIN / 60 ))        # 超過 60 分鐘自動進位到小時
+        MIN=$(( BASE_MIN + PROCESSED_COUNT ))  
+        HR=$(( BASE_HOUR + MIN / 60 ))        
         MIN=$(( MIN % 60 ))
         
-        # 格式化為 HH:MM:SS (補零)
         CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
         
         # 2. 建立該檔案的 ExifTool 參數陣列（強制寫入時區 +08:00）
@@ -246,7 +280,7 @@ for file in "$TARGET_DIR"/*; do
         # 選擇性加入焦距
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
         
-        # 加入光圈相關欄位
+        # 加入光圈相關欄位（覆寫 FNumber 與 ApertureValue 確保 Google Photos 成功顯示）
         if [[ -n "$MAX_APERTURE" ]]; then
             exif_args+=(
                 -MaxApertureValue="$MAX_APERTURE"
@@ -269,7 +303,6 @@ for file in "$TARGET_DIR"/*; do
         
         ((PROCESSED_COUNT++))
         
-        # 即時顯示進度提示
         echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (拍攝時間: $CURRENT_TIME)"
     fi
 done
