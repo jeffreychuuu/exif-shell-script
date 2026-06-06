@@ -159,7 +159,7 @@ USER_MODEL=${USER_MODEL:-"Leica MP"}
 echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則預設為今日]: "
 read USER_DATE
 
-# 【核心修正】若直接按 Enter 留空，自動將變數填入今日日期（格式 YYYY:MM:DD）
+# 若直接按 Enter 留空，自動將變數填入今日日期（格式 YYYY:MM:DD）
 USER_DATE=${USER_DATE:-$(date +%Y:%m:%d)}
 
 # 處理用於檔名的日期格式（抽走冒號，例如 20260606）
@@ -237,9 +237,17 @@ for file in "$TARGET_DIR"/*; do
             -Source="$USER_LAB"
         )
         
-        # 選擇性加入焦距與光圈
+        # 選擇性加入焦距
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
-        [[ -n "$MAX_APERTURE" ]] && exif_args+=(-MaxApertureValue="$MAX_APERTURE")
+        
+        # 【核心修正】加入光圈相關欄位（同時覆寫拍攝光圈 FNumber 與 ApertureValue 確保 Google Photos 成功讀取）
+        if [[ -n "$MAX_APERTURE" ]]; then
+            exif_args+=(
+                -MaxApertureValue="$MAX_APERTURE"
+                -FNumber="$MAX_APERTURE"
+                -ApertureValue="$MAX_APERTURE"
+            )
+        fi
         
         # 3. 呼叫 ExifTool 寫入中繼資料
         /opt/homebrew/bin/exiftool "${exif_args[@]}" "$file" > /dev/null
