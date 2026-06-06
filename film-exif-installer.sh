@@ -70,12 +70,15 @@ echo "3) Kodak Portra 400"
 echo "4) Kodak Portra 800"
 echo "5) Crystal 250D AHU - 5207"
 echo "6) Crystal 250D AHU - 5219"
-echo "7) Cinestill 800T"
-echo "8) Cinestill 400D"
+echo "7) CineStill 800T"
+echo "8) CineStill 400D"
 echo "9) Ilford Pan 100"
 echo "10) Ilford Pan 400"
-echo "11) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-11，直接 Enter 則為 1): "
+echo "11) FilmNeverDie IRO 400"
+echo "12) Retocolor Maple 100"
+echo "13) CAMDI Lost in Tokyo 500"
+echo "14) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-14，直接 Enter 則為 1): "
 read FILM_CHOICE
 
 FILM_CHOICE=${FILM_CHOICE:-1}
@@ -86,11 +89,14 @@ case $FILM_CHOICE in
     4)  USER_FILM="Kodak Portra 800";         USER_ISO=800 ;;
     5)  USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
     6)  USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
-    7)  USER_FILM="Cinestill 800T";           USER_ISO=800 ;;
-    8)  USER_FILM="Cinestill 400D";           USER_ISO=400 ;;
+    7)  USER_FILM="CineStill 800T";           USER_ISO=800 ;;
+    8)  USER_FILM="CineStill 400D";           USER_ISO=400 ;;
     9)  USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
     10) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
-    11)
+    11) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
+    12) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
+    13) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
+    14)
         echo -n "✍️ 請輸入自訂菲林型號: "
         read CUSTOM_FILM
         USER_FILM=$CUSTOM_FILM
@@ -240,7 +246,7 @@ for file in "$TARGET_DIR"/*; do
         # 選擇性加入焦距
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
         
-        # 【核心修正】加入光圈相關欄位（同時覆寫拍攝光圈 FNumber 與 ApertureValue 確保 Google Photos 成功讀取）
+        # 加入光圈相關欄位
         if [[ -n "$MAX_APERTURE" ]]; then
             exif_args+=(
                 -MaxApertureValue="$MAX_APERTURE"
