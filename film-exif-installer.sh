@@ -156,15 +156,14 @@ read USER_MODEL
 USER_MODEL=${USER_MODEL:-"Leica MP"}
 
 # 拍攝日期輸入
-echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則保留原狀]: "
+echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則預設為今日]: "
 read USER_DATE
 
-# 處理用於檔名的日期格式
-if [ -n "$USER_DATE" ]; then
-    FILE_DATE="${USER_DATE//:/}" # 抽走冒號，變成 20260520
-else
-    FILE_DATE=$(date +%Y%m%d)    # 若無輸入，預設用今日日期
-fi
+# 【核心修正】若直接按 Enter 留空，自動將變數填入今日日期（格式 YYYY:MM:DD）
+USER_DATE=${USER_DATE:-$(date +%Y:%m:%d)}
+
+# 處理用於檔名的日期格式（抽走冒號，例如 20260606）
+FILE_DATE="${USER_DATE//:/}"
 
 
 echo "\n----------------------------------------"
@@ -176,7 +175,7 @@ echo "菲林型號: $USER_FILM"
 echo "ISO 設定: $USER_ISO"
 echo "鏡頭型號: $LENS_NAME"
 echo "沖掃公司: $USER_LAB"
-echo "EXIF 日期: ${USER_DATE:-隨檔案預設 (每張遞增功能僅在指定日期時啟用)}"
+echo "EXIF 日期: $USER_DATE (不論自訂或今日，均會執行遞增並寫入)"
 echo "檔名日期: $FILE_DATE"
 echo "目標資料夾: $TARGET_DIR"
 echo "----------------------------------------\n"
@@ -211,7 +210,16 @@ for file in "$TARGET_DIR"/*; do
         base_name="${file:t}"
         dir_name="${file:h}"
         
-        # 1. 建立該檔案的 ExifTool 基本參數陣列
+        # 1. 計算「每張加 1 分鐘」的精準進位時間
+        SEC=$BASE_SEC
+        MIN=$(( BASE_MIN + PROCESSED_COUNT ))  # 每張相片直接加 1 分鐘
+        HR=$(( BASE_HOUR + MIN / 60 ))        # 超過 60 分鐘自動進位到小時
+        MIN=$(( MIN % 60 ))
+        
+        # 格式化為 HH:MM:SS (補零)
+        CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
+        
+        # 2. 建立該檔案的 ExifTool 參數陣列（強制寫入時區 +08:00）
         exif_args=(
             -overwrite_original
             -Make="$USER_MAKE"
@@ -221,6 +229,8 @@ for file in "$TARGET_DIR"/*; do
             -ISO="$USER_ISO"
             -LensModel="$LENS_NAME"
             -Lens="$LENS_NAME"
+            -AllDates="$USER_DATE $CURRENT_TIME+08:00"
+            -XMP:DateCreated="$USER_DATE $CURRENT_TIME+08:00"
             -UserComment="Film Stock: $USER_FILM"
             -XMP:Label="$USER_FILM"
             -Credit="Processed & Scanned by $USER_LAB"
@@ -230,22 +240,6 @@ for file in "$TARGET_DIR"/*; do
         # 選擇性加入焦距與光圈
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
         [[ -n "$MAX_APERTURE" ]] && exif_args+=(-MaxApertureValue="$MAX_APERTURE")
-        
-        # 2. 如果使用者有指定日期，計算「每張加 1 分鐘」的精準進位時間
-        if [ -n "$USER_DATE" ]; then
-            SEC=$BASE_SEC
-            MIN=$(( BASE_MIN + PROCESSED_COUNT ))  # 每張相片直接加 1 分鐘
-            HR=$(( BASE_HOUR + MIN / 60 ))        # 超過 60 分鐘自動進位到小時
-            MIN=$(( MIN % 60 ))
-            
-            # 格式化為 HH:MM:SS (補零)
-            CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
-            
-            exif_args+=(
-                -DateTimeOriginal="$USER_DATE $CURRENT_TIME"
-                -CreateDate="$USER_DATE $CURRENT_TIME"
-            )
-        fi
         
         # 3. 呼叫 ExifTool 寫入中繼資料
         /opt/homebrew/bin/exiftool "${exif_args[@]}" "$file" > /dev/null
@@ -262,11 +256,7 @@ for file in "$TARGET_DIR"/*; do
         ((PROCESSED_COUNT++))
         
         # 即時顯示進度提示
-        if [ -n "$USER_DATE" ]; then
-            echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (拍攝時間: $CURRENT_TIME)"
-        else
-            echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (保持原稿時間)"
-        fi
+        echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (拍攝時間: $CURRENT_TIME)"
     fi
 done
 
