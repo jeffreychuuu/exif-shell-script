@@ -143,7 +143,7 @@ case $LAB_CHOICE in
 esac
 
 if [ -z "$USER_LAB" ]; then
-    echo "❌ ❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
+    echo "❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
 fi
 
 # 5. 要求輸入相機製造商與型號 (Make & Model)
@@ -188,39 +188,4 @@ echo "----------------------------------------\n"
     -Source="$USER_LAB" \
     -ext jpg -ext jpeg -ext png -ext tiff -ext dng "$TARGET_DIR"
 
-echo "✨ EXIF 與菲林數據已成功批次寫入完成。"
-
-# ==========================================
-# ─── 7. 自動重新命名相片檔案 (全新命名邏輯) ───
-# ==========================================
-echo "\n🚚 正在依照指定格式重新命名相片檔案..."
-
-# 處理命名所需的 Camel Case 字串變數
-CAMEL_LENS="${${(C)LENS_NAME}//[^a-zA-Z0-9]/}"
-CAMEL_FILM="${${(C)USER_FILM}//[^a-zA-Z0-9]/}"
-CAMEL_ARTIST="${${(C)AUTHOR_NAME}//[^a-zA-Z0-9]/}"
-
-RENAMED_COUNT=0
-
-for file in "$TARGET_DIR"/*; do
-    # 確保是檔案而非目錄
-    [ -f "$file" ] || continue
-    
-    # 取得副檔名並轉為小寫
-    ext="${file:e:l}"
-    
-    # 僅處理指定的相片格式
-    if [[ "$ext" == "jpg" || "$ext" == "jpeg" || "$ext" == "png" || "$ext" == "tiff" || "$ext" == "dng" ]]; then
-        base_name="${file:t}"
-        dir_name="${file:h}"
-        
-        # 組合新檔名：$LensName(CamelCase)_$FilmStockName(CamelCase)_$Artist(CamelCase)_$originalFileName
-        new_name="${CAMEL_LENS}_${CAMEL_FILM}_${CAMEL_ARTIST}_${base_name}"
-        
-        # 執行更名
-        mv "$file" "$dir_name/$new_name"
-        ((RENAMED_COUNT++))
-    fi
-done
-
-echo "🎉 重新命名完成，共處理了 $RENAMED_COUNT 張相片。"
+echo "\n✨ EXIF 與菲林數據已成功批次寫入完成。"
