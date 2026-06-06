@@ -105,44 +105,60 @@ if [ "$NEED_CUSTOM_LENS" -eq 1 ]; then
 fi
 
 if [ -z "$LENS_NAME" ]; then
-    echo "❌ 錯誤: 鏡頭型號不能為空。"; exit 1
+    echo "❌ 錯誤: 鏡頭型號不能為空. "; exit 1
 fi
 
-# 4. 要求選擇菲林型號並自動判定 ISO
+# 4. 要求選擇菲林型號並自動判定 ISO (已將 Kodak ColorPlus 200 加至 Gold 下方)
 echo "\n🎞️ 請選擇使用的菲林型號 (Film Stock):"
 echo "1) Kodak Ultramax 400 [預設]"
 echo "2) Kodak Gold 200"
-echo "3) Kodak Portra 400"
-echo "4) Kodak Portra 800"
-echo "5) Crystal 250D AHU - 5207"
-echo "6) Crystal 250D AHU - 5219"
-echo "7) CineStill 800T"
-echo "8) CineStill 400D"
-echo "9) Ilford Pan 100"
-echo "10) Ilford Pan 400"
-echo "11) FilmNeverDie IRO 400"
-echo "12) Retocolor Maple 100"
-echo "13) CAMDI Lost in Tokyo 500"
-echo "14) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-14，直接 Enter 則為 1): "
+echo "3) Kodak ColorPlus 200"
+echo "4) Kodak Portra 100"
+echo "5) Kodak Portra 160"
+echo "6) Kodak Portra 400"
+echo "7) Kodak Portra 800"
+echo "8) Kodak Ektacolor 100"
+echo "9) Kodak Ektacolor 160"
+echo "10) Kodak Ektacolor Pro 400"
+echo "11) Kodak Ektacolor Pro 800"
+echo "12) Crystal 250D AHU - 5207"
+echo "13) Crystal 250D AHU - 5219"
+echo "14) CineStill 50D"
+echo "15) CineStill 400D"
+echo "16) CineStill 800T"
+echo "17) Ilford Pan 100"
+echo "18) Ilford Pan 400"
+echo "19) FilmNeverDie IRO 400"
+echo "20) Retocolor Maple 100"
+echo "21) CAMDI Lost in Tokyo 500"
+echo "22) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-22，直接 Enter 則為 1): "
 read FILM_CHOICE
 
 FILM_CHOICE=${FILM_CHOICE:-1}
 case $FILM_CHOICE in
     1)  USER_FILM="Kodak Ultramax 400";       USER_ISO=400 ;;
     2)  USER_FILM="Kodak Gold 200";           USER_ISO=200 ;;
-    3)  USER_FILM="Kodak Portra 400";         USER_ISO=400 ;;
-    4)  USER_FILM="Kodak Portra 800";         USER_ISO=800 ;;
-    5)  USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
-    6)  USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
-    7)  USER_FILM="CineStill 800T";           USER_ISO=800 ;;
-    8)  USER_FILM="CineStill 400D";           USER_ISO=400 ;;
-    9)  USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
-    10) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
-    11) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
-    12) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
-    13) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
-    14)
+    3)  USER_FILM="Kodak ColorPlus 200";      USER_ISO=200 ;;
+    4)  USER_FILM="Kodak Portra 100";         USER_ISO=100 ;;
+    5)  USER_FILM="Kodak Portra 160";         USER_ISO=160 ;;
+    6)  USER_FILM="Kodak Portra 400";         USER_ISO=400 ;;
+    7)  USER_FILM="Kodak Portra 800";         USER_ISO=800 ;;
+    8)  USER_FILM="Kodak Ektacolor 100";      USER_ISO=100 ;;
+    9)  USER_FILM="Kodak Ektacolor 160";      USER_ISO=160 ;;
+    10) USER_FILM="Kodak Ektacolor Pro 400";  USER_ISO=400 ;;
+    11) USER_FILM="Kodak Ektacolor Pro 800";  USER_ISO=800 ;;
+    12) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
+    13) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
+    14) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
+    15) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
+    16) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
+    17) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
+    18) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
+    19) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
+    20) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
+    21) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
+    22)
         echo -n "✍️ 請輸入自訂菲林型號: "
         read CUSTOM_FILM
         USER_FILM=$CUSTOM_FILM
