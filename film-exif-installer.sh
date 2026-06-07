@@ -281,7 +281,7 @@ case $PUSHPULL_CHOICE in
 esac
 
 # 5.3 要求選擇掃描器 (Scanner)
-echo "\n𖖨️ 請選擇掃描器 (Scanner):"
+echo "\n🖨 請選擇掃描器 (Scanner):"
 echo "1) Noritsu HS-1800 [預設]"
 echo "2) Noritsu LS-600"
 echo "3) Fuji Frontier SP3000"
