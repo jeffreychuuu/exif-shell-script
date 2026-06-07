@@ -131,18 +131,21 @@ echo "8) Kodak Ektacolor 100"
 echo "9) Kodak Ektacolor 160"
 echo "10) Kodak Ektacolor Pro 400"
 echo "11) Kodak Ektacolor Pro 800"
-echo "12) Crystal 250D AHU - 5207"
-echo "13) Crystal 250D AHU - 5219"
-echo "14) CineStill 50D"
-echo "15) CineStill 400D"
-echo "16) CineStill 800T"
-echo "17) Ilford Pan 100"
-echo "18) Ilford Pan 400"
-echo "19) FilmNeverDie IRO 400"
-echo "20) Retocolor Maple 100"
-echo "21) CAMDI Lost in Tokyo 500"
-echo "22) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-22，直接 Enter 則為 1): "
+echo "12) Fujicolor C200"
+echo "13) Fujicolor Superia Premium 400"
+echo "14) Lucky C200"
+echo "15) Crystal 250D AHU - 5207"
+echo "16) Crystal 250D AHU - 5219"
+echo "17) CineStill 50D"
+echo "18) CineStill 400D"
+echo "19) CineStill 800T"
+echo "20) Ilford Pan 100"
+echo "21) Ilford Pan 400"
+echo "22) FilmNeverDie IRO 400"
+echo "23) Retocolor Maple 100"
+echo "24) CAMDI Lost in Tokyo 500"
+echo "25) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-25，直接 Enter 則為 1): "
 read FILM_CHOICE
 
 FILM_CHOICE=${FILM_CHOICE:-1}
@@ -158,17 +161,20 @@ case $FILM_CHOICE in
     9)  USER_FILM="Kodak Ektacolor 160";      USER_ISO=160 ;;
     10) USER_FILM="Kodak Ektacolor Pro 400";  USER_ISO=400 ;;
     11) USER_FILM="Kodak Ektacolor Pro 800";  USER_ISO=800 ;;
-    12) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
-    13) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
-    14) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
-    15) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
-    16) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
-    17) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
-    18) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
-    19) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
-    20) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
-    21) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
-    22)
+    12) USER_FILM="Fujicolor C200";           USER_ISO=200 ;;
+    13) USER_FILM="Fujicolor Superia Premium 400"; USER_ISO=400 ;;
+    14) USER_FILM="Lucky C200";               USER_ISO=200 ;;
+    15) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
+    16) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
+    17) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
+    18) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
+    19) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
+    20) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
+    21) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
+    22) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
+    23) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
+    24) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
+    25)
         echo -n "✍️ 請輸入自訂菲林型號: "
         read CUSTOM_FILM
         USER_FILM=$CUSTOM_FILM
@@ -199,8 +205,10 @@ echo "4) Photo Garden 金藝"
 echo "5) HK Camera"
 echo "6) Showa"
 echo "7) Colorluxe Express 彩圖麗"
-echo "8) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-8，直接 Enter 則為 1): "
+echo "8) Lucky 樂凱"
+echo "9) Fiona"
+echo "10) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-10，直接 Enter 則為 1): "
 read LAB_CHOICE
 
 LAB_CHOICE=${LAB_CHOICE:-1}
@@ -212,7 +220,9 @@ case $LAB_CHOICE in
     5) USER_LAB="HK Camera" ;;
     6) USER_LAB="Showa" ;;
     7) USER_LAB="Colorluxe Express 彩圖麗" ;;
-    8)
+    8) USER_LAB="Lucky 樂凱" ;;
+    9) USER_LAB="Fiona" ;;
+    10)
         echo -n "✍️ 請輸入自訂沖掃公司名稱: "
         read CUSTOM_LAB
         USER_LAB=$CUSTOM_LAB
@@ -222,6 +232,84 @@ esac
 
 if [ -z "$USER_LAB" ]; then
     echo "❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
+fi
+
+# 5.1 要求選擇沖洗技術 (Developing Process)
+echo "\n🧪 請選擇沖洗技術 (Developing Process):"
+echo "1) C-41 [預設]"
+echo "2) ECN-2"
+echo "3) E-6"
+echo "4) B&W"
+echo "5) B&W Reversal"
+echo -n "請輸入選項數字 (1-5，直接 Enter 則為 1): "
+read PROCESS_CHOICE
+
+PROCESS_CHOICE=${PROCESS_CHOICE:-1}
+case $PROCESS_CHOICE in
+    1) USER_PROCESS="C-41" ;;
+    2) USER_PROCESS="ECN-2" ;;
+    3) USER_PROCESS="E-6" ;;
+    4) USER_PROCESS="B&W" ;;
+    5) USER_PROCESS="B&W Reversal" ;;
+    *) echo "❌ 錯誤: 無效的沖洗技術選項。"; exit 1 ;;
+esac
+
+# 5.2 要求選擇曝光處理 (Push/Pull)
+echo "\n🎛️ 請選擇曝光處理 (Push/Pull):"
+echo "1) Normal [預設]"
+echo "2) Push +1"
+echo "3) Push +2"
+echo "4) Push +3"
+echo "5) Pull -1"
+echo "6) Pull -2"
+echo "7) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-7，直接 Enter 則為 1): "
+read PUSHPULL_CHOICE
+
+PUSHPULL_CHOICE=${PUSHPULL_CHOICE:-1}
+case $PUSHPULL_CHOICE in
+    1) USER_PUSHPULL="Normal" ;;
+    2) USER_PUSHPULL="Push +1" ;;
+    3) USER_PUSHPULL="Push +2" ;;
+    4) USER_PUSHPULL="Push +3" ;;
+    5) USER_PUSHPULL="Pull -1" ;;
+    6) USER_PUSHPULL="Pull -2" ;;
+    7)
+        echo -n "✍️ 請輸入自訂曝光處理 (例如 Push +1.5): "
+        read CUSTOM_PUSHPULL
+        USER_PUSHPULL=$CUSTOM_PUSHPULL
+        ;;
+    *) echo "❌ 錯誤: 無效的曝光處理選項。"; exit 1 ;;
+esac
+
+# 5.3 要求選擇掃描器 (Scanner)
+echo "\n🖨️ 請選擇掃描器 (Scanner):"
+echo "1) Noritsu HS-1800 [預設]"
+echo "2) Noritsu LS-600"
+echo "3) Fuji Frontier SP3000"
+echo "4) Hasselblad Flextight X1"
+echo "5) Hasselblad Flextight X5"
+echo "6) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-6，直接 Enter 則為 1): "
+read SCANNER_CHOICE
+
+SCANNER_CHOICE=${SCANNER_CHOICE:-1}
+case $SCANNER_CHOICE in
+    1) USER_SCANNER="Noritsu HS-1800" ;;
+    2) USER_SCANNER="Noritsu LS-600" ;;
+    3) USER_SCANNER="Fuji Frontier SP3000" ;;
+    4) USER_SCANNER="Hasselblad Flextight X1" ;;
+    5) USER_SCANNER="Hasselblad Flextight X5" ;;
+    6)
+        echo -n "✍️ 請輸入自訂掃描器名稱: "
+        read CUSTOM_SCANNER
+        USER_SCANNER=$CUSTOM_SCANNER
+        ;;
+    *) echo "❌ 錯誤: 無效的掃描器選項。"; exit 1 ;;
+esac
+
+if [ -z "$USER_SCANNER" ]; then
+    echo "❌ 錯誤: 掃描器名稱不能為空。"; exit 1
 fi
 
 # 6. 拍攝日期輸入
@@ -246,6 +334,9 @@ echo "鏡頭型號: $LENS_NAME"
 echo "鏡頭焦距: ${FOCAL_LENGTH:-未指定} mm"
 echo "最大光圈: F/${MAX_APERTURE:-未指定}"
 echo "沖掃公司: $USER_LAB"
+echo "沖洗技術: $USER_PROCESS"
+echo "曝光處理: $USER_PUSHPULL"
+echo "掃描儀器: $USER_SCANNER"
 echo "EXIF 日期: $USER_DATE (每張相片拍攝時間遞增 1 分鐘)"
 echo "檔名日期: $FILE_DATE"
 echo "目標資料夾: $TARGET_DIR"
@@ -295,11 +386,13 @@ for file in "$TARGET_DIR"/*; do
             -ISO="$USER_ISO"
             -LensModel="$LENS_NAME"
             -Lens="$LENS_NAME"
+            -Software="$USER_SCANNER"
+            -Instructions="$USER_PROCESS ($USER_PUSHPULL)"
             -AllDates="$USER_DATE $CURRENT_TIME+08:00"
             -XMP:DateCreated="$USER_DATE $CURRENT_TIME+08:00"
-            -UserComment="Film Stock: $USER_FILM"
-            -XMP:Label="$USER_FILM"
-            -Credit="Processed & Scanned by $USER_LAB"
+            -UserComment="Film Stock: $USER_FILM | Process: $USER_PROCESS | Exposure: $USER_PUSHPULL | Scanner: $USER_SCANNER"
+            -XMP:Label="$USER_FILM ($USER_PUSHPULL)"
+            -Credit="Processed by $USER_LAB ($USER_PROCESS) | Scanned via $USER_SCANNER"
             -Source="$USER_LAB"
         )
         
@@ -321,7 +414,7 @@ for file in "$TARGET_DIR"/*; do
         # 4. 生成雙位數流水號 (01, 02, 03...)
         SERIAL_NUM=$(printf "%02d" $((PROCESSED_COUNT + 1)))
         
-        # 5. 組合最終新檔名
+        # 5. 組合最終新檔名 (維持原有機制僅由 Lens, Film, Artist, Date 與 流水號 組成)
         new_name="${CAMEL_LENS}_${CAMEL_FILM}_${CAMEL_ARTIST}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
         
         # 6. 執行更名
