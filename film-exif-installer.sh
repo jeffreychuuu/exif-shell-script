@@ -123,29 +123,28 @@ echo "\n🎞️ 請選擇使用的菲林型號 (Film Stock):"
 echo "1) Kodak Ultramax 400 [預設]"
 echo "2) Kodak Gold 200"
 echo "3) Kodak ColorPlus 200"
-echo "4) Kodak Portra 100"
+echo "4) Kodak Ektar 100"
 echo "5) Kodak Portra 160"
 echo "6) Kodak Portra 400"
 echo "7) Kodak Portra 800"
-echo "8) Kodak Ektacolor 100"
-echo "9) Kodak Ektacolor 160"
-echo "10) Kodak Ektacolor Pro 400"
-echo "11) Kodak Ektacolor Pro 800"
-echo "12) Fujicolor C200"
-echo "13) Fujicolor Superia Premium 400"
-echo "14) Lucky C200"
-echo "15) Crystal 250D AHU - 5207"
-echo "16) Crystal 250D AHU - 5219"
-echo "17) CineStill 50D"
-echo "18) CineStill 400D"
-echo "19) CineStill 800T"
-echo "20) Ilford Pan 100"
-echo "21) Ilford Pan 400"
-echo "22) FilmNeverDie IRO 400"
-echo "23) Retocolor Maple 100"
-echo "24) CAMDI Lost in Tokyo 500"
-echo "25) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-25，直接 Enter 則為 1): "
+echo "8) Kodak Ektacolor Pro 160"
+echo "9) Kodak Ektacolor Pro 400"
+echo "10) Kodak Ektacolor Pro 800"
+echo "11) Fujicolor C200"
+echo "12) Fujicolor Superia Premium 400"
+echo "13) Lucky C200"
+echo "14) Crystal 250D AHU - 5207"
+echo "15) Crystal 250D AHU - 5219"
+echo "16) CineStill 50D"
+echo "17) CineStill 400D"
+echo "18) CineStill 800T"
+echo "19) Ilford Pan 100"
+echo "20) Ilford Pan 400"
+echo "21) FilmNeverDie IRO 400"
+echo "22) Retocolor Maple 100"
+echo "23) CAMDI Lost in Tokyo 500"
+echo "24) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-24，直接 Enter 則為 1): "
 read FILM_CHOICE
 
 FILM_CHOICE=${FILM_CHOICE:-1}
@@ -153,28 +152,27 @@ case $FILM_CHOICE in
     1)  USER_FILM="Kodak Ultramax 400";       USER_ISO=400 ;;
     2)  USER_FILM="Kodak Gold 200";           USER_ISO=200 ;;
     3)  USER_FILM="Kodak ColorPlus 200";      USER_ISO=200 ;;
-    4)  USER_FILM="Kodak Portra 100";         USER_ISO=100 ;;
+    4)  USER_FILM="Kodak Ektar 100";          USER_ISO=100 ;;
     5)  USER_FILM="Kodak Portra 160";         USER_ISO=160 ;;
     6)  USER_FILM="Kodak Portra 400";         USER_ISO=400 ;;
     7)  USER_FILM="Kodak Portra 800";         USER_ISO=800 ;;
-    8)  USER_FILM="Kodak Ektacolor 100";      USER_ISO=100 ;;
-    9)  USER_FILM="Kodak Ektacolor 160";      USER_ISO=160 ;;
-    10) USER_FILM="Kodak Ektacolor Pro 400";  USER_ISO=400 ;;
-    11) USER_FILM="Kodak Ektacolor Pro 800";  USER_ISO=800 ;;
-    12) USER_FILM="Fujicolor C200";           USER_ISO=200 ;;
-    13) USER_FILM="Fujicolor Superia Premium 400"; USER_ISO=400 ;;
-    14) USER_FILM="Lucky C200";               USER_ISO=200 ;;
-    15) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
-    16) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
-    17) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
-    18) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
-    19) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
-    20) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
-    21) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
-    22) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
-    23) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
-    24) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
-    25)
+    8)  USER_FILM="Kodak Ektacolor Pro 160";  USER_ISO=160 ;;
+    9)  USER_FILM="Kodak Ektacolor Pro 400";  USER_ISO=400 ;;
+    10) USER_FILM="Kodak Ektacolor Pro 800";  USER_ISO=800 ;;
+    11) USER_FILM="Fujicolor C200";           USER_ISO=200 ;;
+    12) USER_FILM="Fujicolor Superia Premium 400"; USER_ISO=400 ;;
+    13) USER_FILM="Lucky C200";               USER_ISO=200 ;;
+    14) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
+    15) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
+    16) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
+    17) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
+    18) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
+    19) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
+    20) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
+    21) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
+    22) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
+    23) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
+    24)
         echo -n "✍️ 請輸入自訂菲林型號: "
         read CUSTOM_FILM
         USER_FILM=$CUSTOM_FILM
@@ -283,7 +281,7 @@ case $PUSHPULL_CHOICE in
 esac
 
 # 5.3 要求選擇掃描器 (Scanner)
-echo "\n🖨️ 請選擇掃描器 (Scanner):"
+echo "\n𖖨️ 請選擇掃描器 (Scanner):"
 echo "1) Noritsu HS-1800 [預設]"
 echo "2) Noritsu LS-600"
 echo "3) Fuji Frontier SP3000"
