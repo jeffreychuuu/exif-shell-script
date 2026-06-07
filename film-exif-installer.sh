@@ -377,6 +377,7 @@ for file in "$TARGET_DIR"/*; do
         CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
         
         # 2. 建立該檔案的 ExifTool 參數陣列（強制寫入時區 +08:00）
+        # 使用 ExifTool 的雙重賦值法：先設預設為 Scanner 名稱，如果原本有 Software 欄位，則覆蓋為「原值 (Scanner)」
         exif_args=(
             -overwrite_original
             -Make="$USER_MAKE"
@@ -387,13 +388,13 @@ for file in "$TARGET_DIR"/*; do
             -LensModel="$LENS_NAME"
             -Lens="$LENS_NAME"
             -Software="$USER_SCANNER"
+            "-Software<\${Software} ($USER_SCANNER)"
             -Instructions="$USER_PROCESS ($USER_PUSHPULL)"
             -AllDates="$USER_DATE $CURRENT_TIME+08:00"
             -XMP:DateCreated="$USER_DATE $CURRENT_TIME+08:00"
             -UserComment="Film Stock: $USER_FILM | Process: $USER_PROCESS | Exposure: $USER_PUSHPULL | Scanner: $USER_SCANNER"
             -XMP:Label="$USER_FILM ($USER_PUSHPULL)"
             -Credit="Processed by $USER_LAB ($USER_PROCESS) | Scanned via $USER_SCANNER"
-            -Source="$USER_LAB"
         )
         
         # 選擇性加入焦距
