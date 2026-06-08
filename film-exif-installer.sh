@@ -310,15 +310,77 @@ if [ -z "$USER_SCANNER" ]; then
     echo "❌ 錯誤: 掃描器名稱不能為空。"; exit 1
 fi
 
-# 6. 拍攝日期輸入
-echo -n "\n📅 請輸入拍攝日期 [格式 YYYY:MM:DD，如 2026:05:20，直接 Enter 則預設為今日]: "
-read USER_DATE
+# 6. 拍攝日期輸入（重構：支援 20260606 或 2026:06:06 雙格式自動相容與防呆）
+while true; do
+    echo -n "\n📅 請輸入拍攝日期 [格式 YYYYMMDD 或 YYYY:MM:DD，如 20260606，直接 Enter 則預設為今日]: "
+    read DATE_INPUT
+    
+    if [ -z "$DATE_INPUT" ]; then
+        EXIF_DATE=$(date +%Y:%m:%d)
+        FILE_DATE=$(date +%Y%m%d)
+        break
+    fi
+    
+    # 情況 A: 用戶輸入 8 位純數字 (YYYYMMDD)
+    if [[ "$DATE_INPUT" =~ ^[0-9]{8}$ ]]; then
+        FILE_DATE=$DATE_INPUT
+        # 利用 Zsh 原生切片 [start,end] 拼裝出 EXIF 標準冒號格式
+        EXIF_DATE="${DATE_INPUT[1,4]}:${DATE_INPUT[5,6]}:${DATE_INPUT[7,8]}"
+        break
+    # 情況 B: 用戶輸入標準 EXIF 格式 (YYYY:MM:DD)
+    elif [[ "$DATE_INPUT" =~ ^[0-9]{4}:[0-1][0-9]:[0-3][0-9]$ ]]; then
+        EXIF_DATE=$DATE_INPUT
+        FILE_DATE="${DATE_INPUT//:/}"
+        break
+    else
+        echo "❌ 錯誤: 日期格式無效。請輸入 8 位純數字 (如 20260606) 或標準格式 (如 2026:06:06)。"
+    fi
+done
 
-# 若直接按 Enter 留空，自動將變數填入今日日期
-USER_DATE=${USER_DATE:-$(date +%Y:%m:%d)}
+# 6.1 菲林卷號輸入 (嚴格驗證整數，Free Text Input)
+while true; do
+    echo -n "\n🎞️ 請輸入這是第幾卷菲林 (Roll Number) [直接 Enter 則預設為 1]: "
+    read ROLL_INPUT
+    ROLL_INPUT=${ROLL_INPUT:-1}
+    
+    if [[ "$ROLL_INPUT" =~ ^[0-9]+$ ]]; then
+        ROLL_NUM=$ROLL_INPUT
+        break
+    else
+        echo "❌ 錯誤: Roll Number 必須為純整數數字，請重新輸入。"
+    fi
+done
 
-# 處理用於檔名的日期格式（抽走冒號）
-FILE_DATE="${USER_DATE//:/}"
+# 將 Roll 號格式化為雙位數帶首綴字串 (例如 Roll01, Roll02) 確保檔名整齊
+ROLL_PREFIX=$(printf "Roll%02d" $ROLL_NUM)
+
+# 6.2 拍攝開始時間設定 (手動或自動皆會依據 Roll 號疊加小時數)
+echo -n "\n⏰ 是否要手動輸入這卷菲林的基準開始時間？(y/N) [直接 Enter 則預設從 12 點開始加算]: "
+read TIME_CHOICE
+TIME_CHOICE=${TIME_CHOICE:l}
+
+if [[ "$TIME_CHOICE" == "y" ]]; then
+    while true; do
+        echo -n "👉 請輸入基準開始時間 (24小時制 格式 HH:MM，例如 14:30): "
+        read CUSTOM_TIME
+        if [[ "$CUSTOM_TIME" =~ ^([0-1][0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+            RAW_HOUR="${CUSTOM_TIME%%:*}"
+            RAW_MIN="${CUSTOM_TIME##*:}"
+            
+            # 手動輸入也強制加上根據 Roll 號換算的 Offset 小時數
+            BASE_HOUR=$(( 10#$RAW_HOUR + ROLL_NUM - 1 ))
+            BASE_MIN=$(( 10#$RAW_MIN ))
+            break
+        else
+            echo "❌ 錯誤: 時間格式錯誤，請嚴格按照 HH:MM 格式輸入。"
+        fi
+    done
+else
+    # 自動預設換算邏輯：Roll 1 為 12 點，Roll 2 為 13 點，如此類推
+    BASE_HOUR=$(( 12 + ROLL_NUM - 1 ))
+    BASE_MIN=0
+fi
+BASE_SEC=0
 
 
 echo "\n----------------------------------------"
@@ -326,6 +388,7 @@ echo "正在準備寫入以下中繼資料與重新命名："
 echo "相機製造商: $USER_MAKE"
 echo "相機型號: $USER_MODEL"
 echo "作者名稱: $AUTHOR_NAME"
+echo "菲林卷號: $ROLL_PREFIX (第 $ROLL_NUM 卷)"
 echo "菲林型號: $USER_FILM"
 echo "ISO 設定: $USER_ISO"
 echo "鏡頭型號: $LENS_NAME"
@@ -335,7 +398,7 @@ echo "沖掃公司: $USER_LAB"
 echo "沖洗技術: $USER_PROCESS"
 echo "曝光處理: $USER_PUSHPULL"
 echo "掃描儀器: $USER_SCANNER"
-echo "EXIF 日期: $USER_DATE (每張相片拍攝時間遞增 1 分鐘)"
+echo "EXIF 日期: $EXIF_DATE (由 $(printf "%02d:%02d:00" $(( BASE_HOUR % 24 )) $BASE_MIN) 開始，每張遞增 1 分鐘)"
 echo "檔名日期: $FILE_DATE"
 echo "目標資料夾: $TARGET_DIR"
 echo "----------------------------------------\n"
@@ -352,11 +415,6 @@ CAMEL_ARTIST="${${(C)AUTHOR_NAME}//[^a-zA-Z0-9]/}"
 
 PROCESSED_COUNT=0
 
-# 設定時間基準點：中午 12 點正
-BASE_HOUR=12
-BASE_MIN=0
-BASE_SEC=0
-
 # Zsh 預設展開就會跟返 filename 由小至大排列 (Alphabetical Ascending)
 for file in "$TARGET_DIR"/*; do
     [ -f "$file" ] || continue
@@ -371,11 +429,11 @@ for file in "$TARGET_DIR"/*; do
         MIN=$(( BASE_MIN + PROCESSED_COUNT ))  
         HR=$(( BASE_HOUR + MIN / 60 ))        
         MIN=$(( MIN % 60 ))
+        HR=$(( HR % 24 )) # 防止跨日溢出
         
         CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
         
         # 2. 建立該檔案的 ExifTool 參數陣列（強制寫入時區 +08:00）
-        # 使用 ExifTool 的雙重賦值法：先設預設為 Scanner 名稱，如果原本有 Software 欄位，則覆蓋為「原值 (Scanner)」
         exif_args=(
             -overwrite_original
             -Make="$USER_MAKE"
@@ -388,17 +446,18 @@ for file in "$TARGET_DIR"/*; do
             -Software="$USER_SCANNER"
             "-Software<\${Software} ($USER_SCANNER)"
             -Instructions="$USER_PROCESS ($USER_PUSHPULL)"
-            -AllDates="$USER_DATE $CURRENT_TIME+08:00"
-            -XMP:DateCreated="$USER_DATE $CURRENT_TIME+08:00"
+            -AllDates="$EXIF_DATE $CURRENT_TIME+08:00"
+            -XMP:DateCreated="$EXIF_DATE $CURRENT_TIME+08:00"
             -UserComment="Film Stock: $USER_FILM | Process: $USER_PROCESS | Exposure: $USER_PUSHPULL | Scanner: $USER_SCANNER"
             -XMP:Label="$USER_FILM ($USER_PUSHPULL)"
             -Credit="Processed by $USER_LAB ($USER_PROCESS) | Scanned via $USER_SCANNER"
+            -XMP-dc:Description="Photo by $AUTHOR_NAME | Camera: $USER_MODEL ($LENS_NAME) | Film: $USER_FILM (ISO $USER_ISO) | Lab: $USER_LAB | Process: $USER_PROCESS ($USER_PUSHPULL) | Scanner: $USER_SCANNER"
         )
         
         # 選擇性加入焦距
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
         
-        # 加入光圈相關欄位（覆寫 FNumber 與 ApertureValue 確保 Google Photos 成功顯示）
+        # 加入光圈相關欄位
         if [[ -n "$MAX_APERTURE" ]]; then
             exif_args+=(
                 -MaxApertureValue="$MAX_APERTURE"
@@ -413,8 +472,8 @@ for file in "$TARGET_DIR"/*; do
         # 4. 生成雙位數流水號 (01, 02, 03...)
         SERIAL_NUM=$(printf "%02d" $((PROCESSED_COUNT + 1)))
         
-        # 5. 組合最終新檔名 (維持原有機制僅由 Film, Date 與 流水號 組成)
-        new_name="${CAMEL_FILM}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
+        # 5. 組合最終新檔名：FilmName_RollNumber_Date_流水號.ext
+        new_name="${CAMEL_FILM}_${ROLL_PREFIX}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
         
         # 6. 執行更名
         mv "$file" "$dir_name/$new_name"
