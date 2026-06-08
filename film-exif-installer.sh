@@ -82,7 +82,7 @@ for i in {1..$#AUTHORS}; do
 done
 OTHER_AUTH=$(( $#AUTHORS + 1 ))
 echo "$OTHER_AUTH) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_AUTH，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_AUTH，直接 Enter 則為預設): "
 read AUTHOR_CHOICE
 AUTHOR_CHOICE=${AUTHOR_CHOICE:-1}
 
@@ -109,7 +109,7 @@ for i in {1..$#CAMERAS}; do
 done
 OTHER_CAM=$(( $#CAMERAS + 1 ))
 echo "$OTHER_CAM) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_CAM，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_CAM，直接 Enter 則為預設): "
 read CAMERA_CHOICE
 CAMERA_CHOICE=${CAMERA_CHOICE:-1}
 
@@ -133,7 +133,7 @@ if [[ "$CAMERA_CHOICE" -ge 1 && "$CAMERA_CHOICE" -le "$#CAMERAS" ]]; then
     done
     OTHER_LENS=$(( $#TARGET_LENSES + 1 ))
     echo "$OTHER_LENS) 其他 (自行輸入 Free text)"
-    echo -n "請輸入選項數字 (1-$OTHER_LENS，直接 Enter 則為 1): "
+    echo -n "請輸入選項數字 (1-$OTHER_LENS，直接 Enter 則為預設): "
     read LENS_CHOICE
     LENS_CHOICE=${LENS_CHOICE:-1}
     
@@ -183,7 +183,7 @@ for i in {1..$#FILMS}; do
 done
 OTHER_FILM=$(( $#FILMS + 1 ))
 echo "$OTHER_FILM) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_FILM，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_FILM，直接 Enter 則為預設): "
 read FILM_CHOICE
 FILM_CHOICE=${FILM_CHOICE:-1}
 
@@ -218,7 +218,7 @@ for i in {1..$#LABS}; do
 done
 OTHER_LAB=$(( $#LABS + 1 ))
 echo "$OTHER_LAB) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_LAB，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_LAB，直接 Enter 則為預設): "
 read LAB_CHOICE
 LAB_CHOICE=${LAB_CHOICE:-1}
 
@@ -242,7 +242,7 @@ echo "\n🧪 請選擇沖洗技術 (Developing Process):"
 for i in {1..$#PROCESSES}; do
     [[ $i -eq 1 ]] && echo "$i) $PROCESSES[$i] [預設]" || echo "$i) $PROCESSES[$i]"
 done
-echo -n "請輸入選項數字 (1-$#PROCESSES，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$#PROCESSES，直接 Enter 則為預設): "
 read PROCESS_CHOICE
 PROCESS_CHOICE=${PROCESS_CHOICE:-1}
 
@@ -260,7 +260,7 @@ for i in {1..$#PUSHPULLS}; do
 done
 OTHER_PP=$(( $#PUSHPULLS + 1 ))
 echo "$OTHER_PP) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_PP，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_PP，直接 Enter 則為預設): "
 read PUSHPULL_CHOICE
 PUSHPULL_CHOICE=${PUSHPULL_CHOICE:-1}
 
@@ -282,7 +282,7 @@ for i in {1..$#SCANNERS}; do
 done
 OTHER_SCAN=$(( $#SCANNERS + 1 ))
 echo "$OTHER_SCAN) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-$OTHER_SCAN，直接 Enter 則為 1): "
+echo -n "請輸入選項數字 (1-$OTHER_SCAN，直接 Enter 則為預設): "
 read SCANNER_CHOICE
 SCANNER_CHOICE=${SCANNER_CHOICE:-1}
 
