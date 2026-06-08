@@ -1,10 +1,7 @@
 .history
 .DS_Store
 
-# gphotos-uploader-cli 運行暫存與私密憑證
-tokens/
-uploaded_files/
-ongoing_uploads/
-
-# 包含個人私密 ClientID / ClientSecret 的實體設定檔
-config.hjson
+# 忽略 gphotos-config 資料夾內的所有運行暫存與實體私鑰
+gphotos-config/*
+# 唯獨放行範本檔案，讓它可以被推上 GitHub
+!gphotos-config/config.example.hjson

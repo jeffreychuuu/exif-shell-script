@@ -1,141 +1,99 @@
 # Exif Shell Script 工具集
 
-本專案提供一組用於處理相片 EXIF 中繼資料、自動重新命名與雲端同步上傳的 Shell 腳本工具，特別針對菲林（底片）數位化歸檔與 Sony HIF/HEIC 檔案方向修正及 Google Photos 自動化備份流程進行全面優化。
-
-## 📂 檔案清單與功能總覽
-
-| 腳本/檔案名稱                 | 檔案類型   | 主要用途                                           | 核心特性                                                                                                                            |
-| :---------------------------- | :--------- | :------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| `film-exif-installer.sh`      | Zsh 腳本   | 批次寫入菲林中繼資料與重新命名                     | 互動式選單、自動對應 ISO、時間每張遞增 1 分鐘、支援自訂時間基準與卷號小時自動推移、支援相對/絕對路徑。                              |
-| `fix-sony-hif-orientation.sh` | Zsh 腳本   | 批次修正 Sony 相機 `.hif` / `.heic` 檔案的方向屬性 | 支援指定「相對/絕對路徑」、自動**遞迴（Recursive）**掃描子資料夾，將 `CameraOrientation` 寫入標準 `Orientation`。                   |
-| `fix-and-upload-sony-hif.sh`  | Zsh 腳本   | 一鍵完成「方向修正」與「Google Photos 備份」       | 專案終極自動化工具。自動轉絕對路徑並動態覆寫 `config.hjson` 內的 `SourceFolder` 欄位，完成遞迴方向修正後自動呼叫 CLI 進行同步上傳。 |
-| `config.example.hjson`        | 設定檔範本 | 提供 `gphotos-uploader-cli` 的設定結構參考         | 欄位完全符合官方新版規範（使用 `SourceFolder` 與 `Album`），預設組態動態相簿範本。                                                  |
-| `.gitignore`                  | 設定檔     | 排除環境暫存與私密憑證                             | 強制隔離 `config.hjson`、`tokens/`、`uploaded_files/` 及 `ongoing_uploads/`，防止隱私洩漏。                                         |
+本專案提供一組用於處理相片 EXIF 中繼資料、自動重新命名與雲端同步上傳的 Zsh 腳本工具。專案採用極簡架構，將核心功能收斂為兩大工具，並全面整合 Google Photos 雲端備份自動化流程。
 
 ---
 
-## 📋 系統環境與相依性需求
+## 📂 專案結構與檔案總覽
 
-- **環境需求**：macOS / Linux (腳本基於 `#!/bin/zsh` 撰寫)
-- **工具相依性**：
-  1. [ExifTool](https://exiftool.org/)：腳本內預設執行路徑為 `/opt/homebrew/bin/exiftool`。
-  2. [gphotos-uploader-cli](https://github.com/gphotosuploader/gphotos-uploader-cli)：用於執行 Google Photos 雲端無感同步上傳。
-
----
-
-## 🛠️ 工具詳細說明與操作指南
-
-### 1. 菲林中繼資料寫入暨命名工具 (`film-exif-installer.sh`)
-
-此腳本專為底片數位化掃描檔案設計。透過終端機互動式選單，規範檔名並補全傳統相機無法記錄的 EXIF 欄位。
-
-#### 💡 核心自動化邏輯
-
-- **支援路徑模式**：同時接受「相對路徑」與「絕對路徑」作為參數，未帶入參數則預設處理當前目錄 (`.`)。
-- **時間防錯排序**：可自訂 `HH:MM` 啟始時間（預設 12:00），每張相片的時間戳記會**自動精準遞增 1 分鐘**，防範相簿排序錯亂。
-- **卷號時間推移**：啟始小時會依卷號（Roll Number）自動疊加推移（公式：`實際小時 = 基準小時 + 卷號 - 1`）。
-- **標準化檔名結構**：
-  `[底片駝峰字串]_[卷號字串]_[拍攝年月日]_[雙位數流水號].[原副檔名]`
-  _(註：鏡頭與作者變數目前僅供寫入 EXIF，不組合進檔名)_
-
-#### 📖 執行方式
-
-```shell
-# 賦予執行權限
-chmod +x film-exif-installer.sh
-
-# 執行腳本（可帶入目標資料夾路徑，未帶入則預設為目前所在目錄 `.`）
-./film-exif-installer.sh /path/to/your/photos
+```text
+exif-shell-script/
+├── .gitignore                  # Git 忽略設定（自動隔離私密憑證與本地快取）
+├── README.md                   # 本說明文件
+├── film-exif-installer.sh      # 菲林中繼資料批次寫入暨命名工具（整合上傳功能）
+├── fix-sony-hif-orientation.sh # Sony HIF/HEIC 方向遞迴修正工具（整合上傳功能）
+└── gphotos-config/             # 🪺 Google Photos 同步配置專用資料夾
+    ├── config.example.hjson    # 設定檔範本（可公開推至 GitHub）
+    ├── config.hjson            # 實體私密設定檔（安全隔離，Git 自動忽略）
+    ├── tokens/                 # Google OAuth 授權憑證快取（Git 自動忽略）
+    ├── uploaded_files/         # 已成功上傳的檔案去重資料庫（Git 自動忽略）
+    └── ongoing_uploads/        # 斷點續傳暫存快取區（Git 自動忽略）
 ```
 
-### 2. Sony HIF 方向修正工具 (`fix-sony-hif-orientation.sh`)
+### 📋 核心檔案功能一覽
 
-部分看圖軟體或作業系統無法正確識別 Sony 相機產生的 .hif 或 .heic 檔案的旋轉角度。此腳本利用 ExifTool 批次讀取 CameraOrientation 中繼資料，並強制覆寫至標準的 Orientation 欄位中。
+| 腳本/檔案名稱                 | 主要用途                                              | 核心特性                                                                                     |
+| :---------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| `film-exif-installer.sh`      | 批次寫入菲林中繼資料與自動重新命名                    | 互動式選單、自動對應 ISO、相片時間每張遞增 1 分鐘、卷號小時自動推移、選填一鍵同步上傳。      |
+| `fix-sony-hif-orientation.sh` | 批次修正 Sony 相機 `.hif` / `.heic` 的檔案旋轉角度    | **全面遞迴（Recursive）**深入所有子資料夾、提取原始相機方向寫入標準 EXIF、選填一鍵同步上傳。 |
+| `gphotos-config/`             | 集中收納所有與 Google Photos 上傳相關的組態與本機暫存 | 實行「單一事實來源」架構。腳本執行時會自動動態重寫此目錄下的 `config.hjson`，無須手動介入。  |
 
-#### 💡 核心自動化邏輯
+## 🛠️ 統一命令列參數使用指南
 
-- 自動過濾系統產生的暫存檔（如 .\_ 開頭的檔案）。
-- 僅針對 .hif, .HIF, .heic, .HEIC 進行批次靜默處理 (-q -q)。
-- 直接覆寫原始檔案 (-overwrite_original)。
+兩大腳本皆採用完全一致的參數設計，同時支援「相對路徑」與「絕對路徑」。透過第二參數，可動態決定是否觸發 Google Photos 自動同步。
 
-#### 📖 執行方式
+### 📖 參數組合與雲端行為對照表
 
-將腳本放置於相片所在目錄或於該目錄下直接執行：
+| 使用場景模式                                | 第二參數輸入範例     | `config.hjson` 欄位動態重寫結果                                     | Google Photos 雲端相簿實際行為                                                   |
+| :------------------------------------------ | :------------------- | :------------------------------------------------------------------ | :------------------------------------------------------------------------------- |
+| **1. 純本地處理**<br>（不上傳雲端）         | _不填寫第二參數_     | _不觸發上傳流程，不改寫設定檔_                                      | 僅完成本地端相片的 EXIF 寫入、重新命名或方向修正，適合本機歸檔。                 |
+| **2. 動態自動分類**<br>（依子資料夾建相簿） | **`auto`**           | `SourceFolder: "/.../實體路徑"`<br>`Album: "template:%_directory%"` | 自動依據相片所在的**最內層子資料夾名稱**，在雲端各自建立對應名稱的相簿進行分類。 |
+| **3. 強制指定相簿**<br>（全數塞入特定相簿） | **`"自訂相簿名稱"`** | `SourceFolder: "/.../實體路徑"`<br>`Album: "name:自訂相簿名稱"`     | 忽略任何子資料夾結構，強制將該路徑下所有相片打包上傳至雲端指定名稱的單一相簿中。 |
 
-```shell
-# 賦予執行權限
-chmod +x fix-sony-hif-orientation.sh
-
-# 執行腳本（可帶入目標資料夾路徑，未帶入則預設為目前所在目錄 `.`）
-./fix-sony-hif-orientation.sh /path/to/your/photos
-```
-
-### 3. 一體化修正上傳工具 (`fix-and-upload-sony-hif.sh`)
-
-本專案的最強自動化模組。實現「單一事實來源（Single Source of Truth）」，你可以直接透過指令參數動態指定**目標資料夾**與**雲端相簿名稱**，完全不需手動修改 `config.hjson`。
-
-#### 💡 核心自動化邏輯
-
-1. **路徑自動實體化**：將傳入的任何相對/絕對路徑自動轉為標準「絕對路徑」。
-2. **環境變數安全注入**：採用 Perl 調用環境變數環境進行設定檔改寫，完美避開路徑斜線（`/`）引發的正則表達式衝突。
-3. **動態相簿決策機制**：依據是否傳入第二參數，自動重寫為固定相簿或動態子資料夾相簿標籤。
-
-#### 📖 多維度命令列參數使用指南
-
-| 使用場景功能                         | 終端機執行指令範例                                 | config.hjson 欄位動態變更結果                                   | Google Photos 雲端實際相簿行為                                                         |
-| :----------------------------------- | :------------------------------------------------- | :-------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| **預設模式**<br>（動態子資料夾分類） | `./fix-and-upload-sony-hif.sh ./test`              | `SourceFolder: "/.../test"`<br>`Album: "template:%_directory%"` | 自動依據 `test` 內部的**最內層子資料夾名稱**在雲端各自建立對應相簿。                   |
-| **自訂模式**<br>（強制指定單一相簿） | `./fix-and-upload-sony-hif.sh ./test "2026 Tokyo"` | `SourceFolder: "/.../test"`<br>`Album: "name:2026 Tokyo"`       | 忽略子資料夾名稱，將該路徑下所有相片全部強行統一歸類到名為 **`2026 Tokyo`** 的相簿中。 |
+### 💻 指令執行範例
 
 ```shell
-# 賦予執行權限
-chmod +x fix-and-upload-sony-hif.sh
+# ----------------------------------------------------
+# 範例 A：處理菲林相片
+# ----------------------------------------------------
+# 僅進行本地 EXIF 寫入與重新命名
+./film-exif-installer.sh ./my_photos
 
-# 執行此指令，該子資料夾內的相片會完成修正，並精準同步上傳至 Google Photos
-./fix-and-upload-sony-hif.sh ./test "2026 Tokyo"
+# 處理菲林相片，並依據子資料夾名稱自動在 Google Photos 分相簿上傳
+./film-exif-installer.sh ./my_photos auto
+
+# 處理菲林相片，並強制將所有相片上傳至雲端名為 "Leica MP 2026" 的相簿
+./film-exif-installer.sh ./my_photos "Leica MP 2026"
+
+# ----------------------------------------------------
+# 範例 B：修正 Sony HIF/HEIC 相片方向
+# ----------------------------------------------------
+# 僅遞迴修正本地端子資料夾內所有 HIF 檔的方向屬性
+./fix-sony-hif-orientation.sh /Users/jeffreychu/Pictures/SonyPics
+
+# 遞迴修正方向，並依據子資料夾名稱自動在 Google Photos 分相簿上傳
+./fix-sony-hif-orientation.sh /Users/jeffreychu/Pictures/SonyPics auto
+
+# 遞迴修正方向，並強制全部同步至雲端名為 "Sony A7S3 Raw Backups" 的相簿
+./fix-sony-hif-orientation.sh /Users/jeffreychu/Pictures/SonyPics "Sony A7S3 Raw Backups"
 ```
 
-### ⚙️ Google Photos CLI 組態與 Git 安全規範
+## 🔒 Git 安全規範與環境部署
 
-由於本專案涉及與 Google API 連動的私密憑證，推送到 GitHub 前必須嚴格遵守安全規範。
+由於上傳組態涉及與 Google API 連動的私密憑證（OAuth Tokens），推送到遠端儲存庫前必須嚴格遵守安全規範。
 
-#### 1. 本地設定檔範本 (`config.example.hjson`)
+### 1. 本地環境初始化
 
-專案中已隔離真實的 config.hjson。首次使用或在全新環境部署時，請將 config.example.hjson 複製一份並重新命名為 config.hjson，然後填入你在 Google Cloud 主機申請到的私有憑證：
+本專案已在 `.gitignore` 中設定了 `gphotos-config/*` 的全面隔離，僅放行範本檔案。首次使用或部署到新環境時，請依據以下步驟建立你的實體私密設定：
 
-```json
-{
-  APIAppCredentials: {
-    ClientID: "你的_GOOGLE_CLIENT_ID"
-    ClientSecret: "你的_GOOGLE_CLIENT_SECRET"
-  }
-  Account: "your_email@gmail.com"
-  SecretsBackendType: "file"
-  Jobs: [
-    {
-      SourceFolder: "./test"  // 此處路徑會被一體化腳本自動動態覆寫
-      Album: "template:%_directory%"  // 自動依據相片所在的最內層子資料夾名稱在雲端分類建相簿
-    }
-  ]
-}
-```
+1. 進入 `gphotos-config/` 目錄。
+2. 複製 `config.example.hjson` 並重新命名為 `config.hjson`。
+3. 打開 `config.hjson`，將你在 Google Cloud 申請到的專屬 `ClientID` 與 `ClientSecret` 填入。
 
-#### 2. Git 提交注意事項（防憑證洩漏）
+### 2. 安全清理指令（防憑證意外洩漏）
 
-執行 git push 前，請務必確認本地生成的以下私密檔案/資料夾已被 Git 完全忽略：
+如果在設定 `.gitignore` 前，曾不小心執行過 `git add .`，授權檔案可能已進入 Git 暫存區。請在 Push 前執行以下指令強制清除 Git 歷史快取（此操作不會刪除你本機的實體檔案）：
 
-- config.hjson (包含實體私鑰)
-- tokens/ (包含個人 Google 帳戶的驗證 Token)
-- uploaded_files/ 與 ongoing_uploads/ (本地同步上傳進度資料庫)
-  若不慎曾將其加入暫存，請於終端機執行以下指令進行強制快取清除：
-
-```shell
-git rm -r --cached tokens/ uploaded_files/ ongoing_uploads/ config.hjson 2>/dev/null
+```bash
+git rm -r --cached gphotos-config/tokens/ 2>/dev/null
+git rm -r --cached gphotos-config/uploaded_files/ 2>/dev/null
+git rm -r --cached gphotos-config/ongoing_uploads/ 2>/dev/null
+git rm --cached gphotos-config/config.hjson 2>/dev/null
 ```
 
 ### 🔑 附錄：如何免費申請專屬 Google OAuth 憑證
 
-若在執行驗證時遇到 `401` 或 `403` 錯誤，代表需要為個人帳戶組態私有憑證。請展開下方說明進行設定：
+若在執行驗證時遇到 `401` 或 `403` 錯誤，代表需要為個人帳戶配置私有憑證。請展開下方說明進行設定：
 
 <details>
 <summary>⚙️ 點擊展開查看完整 Google Cloud 設定步驟</summary>
@@ -163,6 +121,6 @@ git rm -r --cached tokens/ uploaded_files/ ongoing_uploads/ config.hjson 2>/dev/
    - 點擊 **「Create Client」** (或 Create Credentials -> OAuth client ID)。
    - **Application type (應用程式類型)**：務必選擇 **「Desktop app (電腦應用程式)」**。
    - 建立完成後，在清單內點擊 **「Download JSON」** 圖示將憑證下載至本機。
-   - 將下載的 JSON 內容或字串分別填入本地 `config.hjson` 的 `ClientID` 與 `ClientSecret` 欄位中。
+   - 將下載的 JSON 內容或字串分別填入本地 `gphotos-config/config.hjson` 的 `ClientID` 與 `ClientSecret` 欄位中。
 
 </details>
