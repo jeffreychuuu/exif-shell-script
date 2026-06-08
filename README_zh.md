@@ -20,6 +20,17 @@ exif-shell-script/
     └── ongoing_uploads/        # 斷點續傳暫存快取區（Git 自動忽略）
 ```
 
+## 📦 Homebrew 依賴套件
+
+執行本專案工具前，需先透過 [Homebrew](https://brew.sh) 安裝以下兩項命令列工具。
+
+| 套件名稱 | 安裝指令 | 用途說明 | 官方 GitHub |
+| :--- | :--- | :--- | :--- |
+| **exiftool** | `brew install exiftool` | Perl 語言編寫的 EXIF 中繼資料讀寫工具，用於批次寫入相機型號、鏡頭、底片 ISO、沖掃資訊等欄位至相片檔案中。 | [exiftool/exiftool](https://github.com/exiftool/exiftool) |
+| **gphotos-uploader-cli** | `brew install gphotos-uploader-cli` | Go 語言編寫的 Google Photos 命令列上傳工具，用於將處理完成的相片批次同步至雲端相簿。僅在使用第二參數觸發雲端上傳時才需此依賴。 | [gphotosuploader/gphotos-uploader-cli](https://github.com/gphotosuploader/gphotos-uploader-cli) |
+
+> 💡 首次使用前，請先確保上述兩項套件已透過 Homebrew 正確安裝，否則腳本將無法執行 EXIF 寫入或雲端同步功能。
+
 ### 📋 核心檔案功能一覽
 
 | 腳本/檔案名稱                 | 主要用途                                              | 核心特性                                                                                     |
