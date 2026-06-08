@@ -413,8 +413,8 @@ for file in "$TARGET_DIR"/*; do
         # 4. 生成雙位數流水號 (01, 02, 03...)
         SERIAL_NUM=$(printf "%02d" $((PROCESSED_COUNT + 1)))
         
-        # 5. 組合最終新檔名 (維持原有機制僅由 Lens, Film, Artist, Date 與 流水號 組成)
-        new_name="${CAMEL_LENS}_${CAMEL_FILM}_${CAMEL_ARTIST}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
+        # 5. 組合最終新檔名 (維持原有機制僅由 Film, Date 與 流水號 組成)
+        new_name="${CAMEL_FILM}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
         
         # 6. 執行更名
         mv "$file" "$dir_name/$new_name"
