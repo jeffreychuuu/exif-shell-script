@@ -18,6 +18,7 @@ AUTHORS=("Jeffrey Chu" "Roger Chan" "Tracy Tong")
 CAMERAS=(
     "Leica Camera AG|Leica MP"
     "Olympus|Olympus OM-2Sp"
+    "Lomography|Lomography Simple Use"
 )
 
 # 格式: "LensName|FocalLength|MaxAperture"
@@ -27,6 +28,9 @@ LEICA_LENSES=(
 )
 OLYMPUS_LENSES=(
     "OM-System Zuiko 50mm F/1.4|50|1.4"
+)
+LOMOGRAPHY_SIMPLE_USE_LENSES=(
+    "Plastic Lens 35mm F/9|35|9"
 )
 
 # 格式: "FilmStockName|ISO"
@@ -119,6 +123,7 @@ read CAMERA_CHOICE
 CAMERA_CHOICE=${CAMERA_CHOICE:-1}
 
 NEED_CUSTOM_LENS=0
+SHUTTER_SPEED=""
 
 if [[ "$CAMERA_CHOICE" -ge 1 && "$CAMERA_CHOICE" -le "$#CAMERAS" ]]; then
     c_parts=(${(s:|:)CAMERAS[$CAMERA_CHOICE]})
@@ -129,6 +134,9 @@ if [[ "$CAMERA_CHOICE" -ge 1 && "$CAMERA_CHOICE" -le "$#CAMERAS" ]]; then
         TARGET_LENSES=("${LEICA_LENSES[@]}")
     elif [[ "$CAMERA_CHOICE" -eq 2 ]]; then
         TARGET_LENSES=("${OLYMPUS_LENSES[@]}")
+    elif [[ "$CAMERA_CHOICE" -eq 3 ]]; then
+        TARGET_LENSES=("${LOMOGRAPHY_SIMPLE_USE_LENSES[@]}")
+        SHUTTER_SPEED="1/120"
     fi
     
     echo "\n📂 請選擇使用的鏡頭:"
@@ -442,6 +450,7 @@ echo "ISO 設定: $USER_ISO"
 echo "鏡頭型號: $LENS_NAME"
 echo "鏡頭焦距: ${FOCAL_LENGTH:-未指定} mm"
 echo "最大光圈: F/${MAX_APERTURE:-未指定}"
+[[ -n "$SHUTTER_SPEED" ]] && echo "快門速度: $SHUTTER_SPEED"
 echo "沖掃公司: $USER_LAB"
 echo "沖洗技術: $USER_PROCESS"
 echo "曝光處理: $USER_PUSHPULL"
@@ -547,13 +556,15 @@ for file in "$TARGET_DIR"/*; do
             -Instructions="$USER_PROCESS ($USER_PUSHPULL)"
             -AllDates="$EXIF_DATE $CURRENT_TIME+08:00"
             -XMP:DateCreated="$EXIF_DATE $CURRENT_TIME+08:00"
-            -UserComment="Film Stock: $USER_FILM | Process: $USER_PROCESS | Exposure: $USER_PUSHPULL | Scanner: $USER_SCANNER"
+            -UserComment="Film Stock: $USER_FILM | Process: $USER_PROCESS | Exposure: $USER_PUSHPULL${SHUTTER_SPEED:+ | Shutter: $SHUTTER_SPEED} | Scanner: $USER_SCANNER"
             -XMP:Label="$USER_FILM ($USER_PUSHPULL)"
             -Credit="Processed by $USER_LAB ($USER_PROCESS) | Scanned via $USER_SCANNER"
-            -XMP-dc:Description="Photo by $AUTHOR_NAME | Camera: $USER_MODEL ($LENS_NAME) | Film: $USER_FILM (ISO $USER_ISO) | Lab: $USER_LAB | Process: $USER_PROCESS ($USER_PUSHPULL) | Scanner: $USER_SCANNER"
+            -XMP-dc:Description="Photo by $AUTHOR_NAME | Camera: $USER_MODEL ($LENS_NAME) | Film: $USER_FILM (ISO $USER_ISO)${SHUTTER_SPEED:+ | Shutter: $SHUTTER_SPEED} | Lab: $USER_LAB | Process: $USER_PROCESS ($USER_PUSHPULL) | Scanner: $USER_SCANNER"
         )
         
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
+        [[ -n "$SHUTTER_SPEED" ]] && exif_args+=(-ExposureTime="$SHUTTER_SPEED")
+        [[ -n "$SHUTTER_SPEED" ]] && exif_args+=(-ShutterSpeedValue="$SHUTTER_SPEED")
         
         if [[ -n "$MAX_APERTURE" ]]; then
             exif_args+=(
