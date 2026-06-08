@@ -2,7 +2,7 @@
 
 # 1. 接收命令列參數 ($1: 目錄路徑, $2: 選填相簿名稱/auto)
 TARGET_DIR="${1:-.}"
-ALBUM_INPUT="$2"
+ALBUM_INPUT="${@:2}"
 
 if [ ! -d "$TARGET_DIR" ]; then
     echo "❌ 錯誤: 目錄 $TARGET_DIR 不存在。"
