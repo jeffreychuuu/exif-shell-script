@@ -8,183 +8,199 @@ if [ ! -d "$TARGET_DIR" ]; then
     exit 1
 fi
 
-# 1. 要求選擇作者 (Author)
-echo "✍️ 請選擇作者 (Author):"
-echo "1) Jeffrey Chu [預設]"
-echo "2) Roger Chan"
-echo "3) Tracy Tong"
-echo "4) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-4，直接 Enter 則為 1): "
-read AUTHOR_CHOICE
+# ==========================================
+# ─── 資料參數定義區 ───
+# ==========================================
+AUTHORS=("Jeffrey Chu" "Roger Chan" "Tracy Tong")
 
+# 格式: "Make|Model"
+CAMERAS=(
+    "Leica Camera AG|Leica MP"
+    "Olympus|Olympus OM-2Sp"
+)
+
+# 格式: "LensName|FocalLength|MaxAperture"
+LEICA_LENSES=(
+    "Leica Summarit-M 35mm F/2.5|35|2.5"
+    "Leica Elmarit-M 28mm F/2.8|28|2.8"
+)
+OLYMPUS_LENSES=(
+    "OM-System Zuiko 50mm F/1.4|50|1.4"
+)
+
+# 格式: "FilmStockName|ISO"
+FILMS=(
+    "Kodak Ultramax 400|400"
+    "Kodak Gold 200|200"
+    "Kodak ColorPlus 200|200"
+    "Kodak Ektar 100|100"
+    "Kodak Portra 160|160"
+    "Kodak Portra 400|400"
+    "Kodak Portra 800|800"
+    "Kodak Ektacolor Pro 160|160"
+    "Kodak Ektacolor Pro 400|400"
+    "Kodak Ektacolor Pro 800|800"
+    "Fujicolor C200|200"
+    "Fujicolor Superia Premium 400|400"
+    "Lucky C200|200"
+    "Crystal 250D AHU - 5207|250"
+    "Crystal 250D AHU - 5219|500"
+    "CineStill 50D|50"
+    "CineStill 400D|400"
+    "CineStill 800T|800"
+    "Ilford Pan 100|100"
+    "Ilford Pan 400|400"
+    "FilmNeverDie IRO 400|400"
+    "Retocolor Maple 100|100"
+    "CAMDI Lost in Tokyo 500|500"
+)
+
+LABS=(
+    "DOT-WELL Photo Workshop"
+    "Megatoni Production"
+    "TrueFace Pro Lab 金鈿(真面目)"
+    "Photo Garden 金藝"
+    "HK Camera"
+    "Showa"
+    "Colorluxe Express 彩圖麗"
+    "Lucky 樂凱"
+    "Fiona"
+)
+
+PROCESSES=("C-41" "ECN-2" "E-6" "B&W" "B&W Reversal")
+PUSHPULLS=("Normal" "Push +1" "Push +2" "Push +3" "Pull -1" "Pull -2")
+SCANNERS=("Noritsu HS-1800" "Noritsu LS-600" "Fuji Frontier SP3000" "Hasselblad Flextight X1" "Hasselblad Flextight X5")
+
+# ==========================================
+# ─── 互動式選單邏輯區 ───
+# ==========================================
+
+# 1. 選擇作者
+echo "✍️ 請選擇作者 (Author):"
+for i in {1..$#AUTHORS}; do
+    [[ $i -eq 1 ]] && echo "$i) $AUTHORS[$i] [預設]" || echo "$i) $AUTHORS[$i]"
+done
+OTHER_AUTH=$(( $#AUTHORS + 1 ))
+echo "$OTHER_AUTH) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_AUTH，直接 Enter 則為 1): "
+read AUTHOR_CHOICE
 AUTHOR_CHOICE=${AUTHOR_CHOICE:-1}
-case $AUTHOR_CHOICE in
-    1) AUTHOR_NAME="Jeffrey Chu" ;;
-    2) AUTHOR_NAME="Roger Chan" ;;
-    3) AUTHOR_NAME="Tracy Tong" ;;
-    4)
-        echo -n "✍️ 請輸入自訂作者名稱: "
-        read CUSTOM_ARTIST
-        AUTHOR_NAME=$CUSTOM_ARTIST
-        ;;
-    *) echo "❌ 錯誤: 無效的作者選項。"; exit 1 ;;
-esac
+
+if [[ "$AUTHOR_CHOICE" -eq "$OTHER_AUTH" ]]; then
+    echo -n "✍️ 請輸入自訂作者名稱: "
+    read CUSTOM_ARTIST
+    AUTHOR_NAME=$CUSTOM_ARTIST
+elif [[ "$AUTHOR_CHOICE" -ge 1 && "$AUTHOR_CHOICE" -le "$#AUTHORS" ]]; then
+    AUTHOR_NAME=$AUTHORS[$AUTHOR_CHOICE]
+else
+    echo "❌ 錯誤: 無效的作者選項。"; exit 1
+fi
 
 if [ -z "$AUTHOR_NAME" ]; then
     echo "❌ 錯誤: 作者名稱不能為空。"; exit 1
 fi
 
-# 2. 要求選擇相機 (Camera) 與 3. 連動鏡頭選擇 (Lens)
+
+# 2. 選擇相機 與 3. 連動鏡頭
 echo "\n📷 請選擇相機 (Camera):"
-echo "1) Leica MP [預設]"
-echo "2) Olympus OM-2Sp"
-echo "3) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-3，直接 Enter 則為 1): "
+for i in {1..$#CAMERAS}; do
+    c_parts=(${(s:|:)CAMERAS[$i]})
+    [[ $i -eq 1 ]] && echo "$i) $c_parts[2] [預設]" || echo "$i) $c_parts[2]"
+done
+OTHER_CAM=$(( $#CAMERAS + 1 ))
+echo "$OTHER_CAM) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_CAM，直接 Enter 則為 1): "
 read CAMERA_CHOICE
 CAMERA_CHOICE=${CAMERA_CHOICE:-1}
 
 NEED_CUSTOM_LENS=0
 
-case $CAMERA_CHOICE in
-    1)
-        USER_MAKE="Leica Camera AG"
-        USER_MODEL="Leica MP"
-        
-        # Leica 鏡頭專屬選單
-        echo "\n📂 請選擇使用的 Leica 鏡頭:"
-        echo "1) Leica Summarit-M 35mm F/2.5 [預設]"
-        echo "2) Leica Elmarit-M 28mm F/2.8"
-        echo "3) 其他 (自行輸入 Free text)"
-        echo -n "請輸入選項數字 (1-3，直接 Enter 則為 1): "
-        read LENS_CHOICE
-        LENS_CHOICE=${LENS_CHOICE:-1}
-        
-        case $LENS_CHOICE in
-            1) LENS_NAME="Leica Summarit-M 35mm F/2.5"; FOCAL_LENGTH="35"; MAX_APERTURE="2.5" ;;
-            2) LENS_NAME="Leica Elmarit-M 28mm F/2.8"; FOCAL_LENGTH="28"; MAX_APERTURE="2.8" ;;
-            3) NEED_CUSTOM_LENS=1 ;;
-            *) echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1 ;;
-        esac
-        ;;
-    2)
-        USER_MAKE="Olympus"
-        USER_MODEL="Olympus OM-2Sp"
-        
-        # Olympus 鏡頭專屬選單
-        echo "\n📂 請選擇使用的 Olympus 鏡頭:"
-        echo "1) OM-System Zuiko 50mm F/1.4 [預設]"
-        echo "2) 其他 (自行輸入 Free text)"
-        echo -n "請輸入選項數字 (1-2，直接 Enter 則為 1): "
-        read LENS_CHOICE
-        LENS_CHOICE=${LENS_CHOICE:-1}
-        
-        case $LENS_CHOICE in
-            1) LENS_NAME="OM-System Zuiko 50mm F/1.4"; FOCAL_LENGTH="50"; MAX_APERTURE="1.4" ;;
-            2) NEED_CUSTOM_LENS=1 ;;
-            *) echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1 ;;
-        esac
-        ;;
-    3)
-        echo -n "📷 請輸入自訂相機製造商 [ Make，例如 Fujifilm ]: "
-        read USER_MAKE
-        USER_MAKE=${USER_MAKE:-"Unknown Make"}
-        
-        echo -n "📷 請輸入相機型號 [ Model，例如 GA645 ]: "
-        read USER_MODEL
-        USER_MODEL=${USER_MODEL:-"Unknown Model"}
-        
-        # 自訂相機不進行 Checking，直接開啟 Free text 鏡頭輸入
+if [[ "$CAMERA_CHOICE" -ge 1 && "$CAMERA_CHOICE" -le "$#CAMERAS" ]]; then
+    c_parts=(${(s:|:)CAMERAS[$CAMERA_CHOICE]})
+    USER_MAKE=$c_parts[1]
+    USER_MODEL=$c_parts[2]
+    
+    if [[ "$CAMERA_CHOICE" -eq 1 ]]; then
+        TARGET_LENSES=("${LEICA_LENSES[@]}")
+    elif [[ "$CAMERA_CHOICE" -eq 2 ]]; then
+        TARGET_LENSES=("${OLYMPUS_LENSES[@]}")
+    fi
+    
+    echo "\n📂 請選擇使用的鏡頭:"
+    for i in {1..$#TARGET_LENSES}; do
+        l_parts=(${(s:|:)TARGET_LENSES[$i]})
+        [[ $i -eq 1 ]] && echo "$i) $l_parts[1] [預設]" || echo "$i) $l_parts[1]"
+    done
+    OTHER_LENS=$(( $#TARGET_LENSES + 1 ))
+    echo "$OTHER_LENS) 其他 (自行輸入 Free text)"
+    echo -n "請輸入選項數字 (1-$OTHER_LENS，直接 Enter 則為 1): "
+    read LENS_CHOICE
+    LENS_CHOICE=${LENS_CHOICE:-1}
+    
+    if [[ "$LENS_CHOICE" -eq "$OTHER_LENS" ]]; then
         NEED_CUSTOM_LENS=1
-        ;;
-    *)
-        echo "❌ 錯誤: 無效的相機選項。"; exit 1
-        ;;
-esac
+    elif [[ "$LENS_CHOICE" -ge 1 && "$LENS_CHOICE" -le "$#TARGET_LENSES" ]]; then
+        l_parts=(${(s:|:)TARGET_LENSES[$LENS_CHOICE]})
+        LENS_NAME=$l_parts[1]
+        FOCAL_LENGTH=$l_parts[2]
+        MAX_APERTURE=$l_parts[3]
+    else
+        echo "❌ 錯誤: 無效的鏡頭選項。"; exit 1
+    fi
+elif [[ "$CAMERA_CHOICE" -eq "$OTHER_CAM" ]]; then
+    echo -n "📷 請輸入自訂相機製造商 [ Make，例如 Fujifilm ]: "
+    read USER_MAKE
+    USER_MAKE=${USER_MAKE:-"Unknown Make"}
+    
+    echo -n "📷 請輸入相機型號 [ Model，例如 GA645 ]: "
+    read USER_MODEL
+    USER_MODEL=${USER_MODEL:-"Unknown Model"}
+    NEED_CUSTOM_LENS=1
+else
+    echo "❌ 錯誤: 無效的相機選項。"; exit 1
+fi
 
-# 處理鏡頭的 Free text 輸入
 if [ "$NEED_CUSTOM_LENS" -eq 1 ]; then
     echo -n "✍️ 請輸入自訂鏡頭型號 (例如 Leica Summicron-M 50mm f/2): "
     read CUSTOM_LENS
     LENS_NAME=$CUSTOM_LENS
-    
     echo -n "📏 請輸入焦距數值 (純數字，例如 50，可直接 Enter 跳過): "
     read FOCAL_LENGTH
-    
     echo -n "🎚️ 請輸入最大光圈值 (數字/小數，例如 2.0，可直接 Enter 跳過): "
     read MAX_APERTURE
 fi
 
 if [ -z "$LENS_NAME" ]; then
-    echo "❌ 錯誤: 鏡頭型號不能為空。" ; exit 1
+    echo "❌ 錯誤: 鏡頭型號不能為空。"; exit 1
 fi
 
-# 4. 要求選擇菲林型號並自動判定 ISO
+
+# 4. 選擇菲林型號與 ISO
 echo "\n🎞️ 請選擇使用的菲林型號 (Film Stock):"
-echo "1) Kodak Ultramax 400 [預設]"
-echo "2) Kodak Gold 200"
-echo "3) Kodak ColorPlus 200"
-echo "4) Kodak Ektar 100"
-echo "5) Kodak Portra 160"
-echo "6) Kodak Portra 400"
-echo "7) Kodak Portra 800"
-echo "8) Kodak Ektacolor Pro 160"
-echo "9) Kodak Ektacolor Pro 400"
-echo "10) Kodak Ektacolor Pro 800"
-echo "11) Fujicolor C200"
-echo "12) Fujicolor Superia Premium 400"
-echo "13) Lucky C200"
-echo "14) Crystal 250D AHU - 5207"
-echo "15) Crystal 250D AHU - 5219"
-echo "16) CineStill 50D"
-echo "17) CineStill 400D"
-echo "18) CineStill 800T"
-echo "19) Ilford Pan 100"
-echo "20) Ilford Pan 400"
-echo "21) FilmNeverDie IRO 400"
-echo "22) Retocolor Maple 100"
-echo "23) CAMDI Lost in Tokyo 500"
-echo "24) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-24，直接 Enter 則為 1): "
+for i in {1..$#FILMS}; do
+    f_parts=(${(s:|:)FILMS[$i]})
+    [[ $i -eq 1 ]] && echo "$i) $f_parts[1] [預設]" || echo "$i) $f_parts[1]"
+done
+OTHER_FILM=$(( $#FILMS + 1 ))
+echo "$OTHER_FILM) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_FILM，直接 Enter 則為 1): "
 read FILM_CHOICE
-
 FILM_CHOICE=${FILM_CHOICE:-1}
-case $FILM_CHOICE in
-    1)  USER_FILM="Kodak Ultramax 400";       USER_ISO=400 ;;
-    2)  USER_FILM="Kodak Gold 200";           USER_ISO=200 ;;
-    3)  USER_FILM="Kodak ColorPlus 200";      USER_ISO=200 ;;
-    4)  USER_FILM="Kodak Ektar 100";          USER_ISO=100 ;;
-    5)  USER_FILM="Kodak Portra 160";         USER_ISO=160 ;;
-    6)  USER_FILM="Kodak Portra 400";         USER_ISO=400 ;;
-    7)  USER_FILM="Kodak Portra 800";         USER_ISO=800 ;;
-    8)  USER_FILM="Kodak Ektacolor Pro 160";  USER_ISO=160 ;;
-    9)  USER_FILM="Kodak Ektacolor Pro 400";  USER_ISO=400 ;;
-    10) USER_FILM="Kodak Ektacolor Pro 800";  USER_ISO=800 ;;
-    11) USER_FILM="Fujicolor C200";           USER_ISO=200 ;;
-    12) USER_FILM="Fujicolor Superia Premium 400"; USER_ISO=400 ;;
-    13) USER_FILM="Lucky C200";               USER_ISO=200 ;;
-    14) USER_FILM="Crystal 250D AHU - 5207";  USER_ISO=250 ;;
-    15) USER_FILM="Crystal 250D AHU - 5219";  USER_ISO=500 ;; 
-    16) USER_FILM="CineStill 50D";            USER_ISO=50  ;;
-    17) USER_FILM="CineStill 400D";           USER_ISO=400 ;;
-    18) USER_FILM="CineStill 800T";           USER_ISO=800 ;;
-    19) USER_FILM="Ilford Pan 100";           USER_ISO=100 ;;
-    20) USER_FILM="Ilford Pan 400";           USER_ISO=400 ;;
-    21) USER_FILM="FilmNeverDie IRO 400";     USER_ISO=400 ;;
-    22) USER_FILM="Retocolor Maple 100";      USER_ISO=100 ;;
-    23) USER_FILM="CAMDI Lost in Tokyo 500";  USER_ISO=500 ;;
-    24)
-        echo -n "✍️ 請輸入自訂菲林型號: "
-        read CUSTOM_FILM
-        USER_FILM=$CUSTOM_FILM
-        
-        # 自訂菲林時觸發 ISO 手動輸入
-        echo -n "👉 偵測到自訂菲林，請輸入 ISO 數值: "
-        read USER_ISO
-        ;;
-    *) echo "❌ 錯誤: 無效的菲林選項。"; exit 1 ;;
-esac
 
-# 驗證最終取得的 ISO 是否為純數字
+if [[ "$FILM_CHOICE" -eq "$OTHER_FILM" ]]; then
+    echo -n "✍️ 請輸入自訂菲林型號: "
+    read CUSTOM_FILM
+    USER_FILM=$CUSTOM_FILM
+    echo -n "👉 偵測到自訂菲林，請輸入 ISO 數值: "
+    read USER_ISO
+elif [[ "$FILM_CHOICE" -ge 1 && "$FILM_CHOICE" -le "$#FILMS" ]]; then
+    f_parts=(${(s:|:)FILMS[$FILM_CHOICE]})
+    USER_FILM=$f_parts[1]
+    USER_ISO=$f_parts[2]
+else
+    echo "❌ 錯誤: 無效的菲林選項。"; exit 1
+fi
+
 if [[ ! "$USER_ISO" =~ ^[0-9]+$ ]]; then
     echo "❌ 錯誤: ISO 必須為純數字（目前值: $USER_ISO）。"
     exit 1
@@ -194,123 +210,99 @@ if [ -z "$USER_FILM" ]; then
     echo "❌ 錯誤: 菲林型號不能為空。"; exit 1
 fi
 
-# 5. 要求選擇或輸入沖掃公司名稱
-echo "\n🏢 請選擇沖掃公司:"
-echo "1) DOT-WELL Photo Workshop [預設]"
-echo "2) Megatoni Production"
-echo "3) TrueFace Pro Lab 金鈿(真面目)"
-echo "4) Photo Garden 金藝"
-echo "5) HK Camera"
-echo "6) Showa"
-echo "7) Colorluxe Express 彩圖麗"
-echo "8) Lucky 樂凱"
-echo "9) Fiona"
-echo "10) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-10，直接 Enter 則為 1): "
-read LAB_CHOICE
 
+# 5. 選擇沖掃公司
+echo "\n🏢 請選擇沖掃公司:"
+for i in {1..$#LABS}; do
+    [[ $i -eq 1 ]] && echo "$i) $LABS[$i] [預設]" || echo "$i) $LABS[$i]"
+done
+OTHER_LAB=$(( $#LABS + 1 ))
+echo "$OTHER_LAB) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_LAB，直接 Enter 則為 1): "
+read LAB_CHOICE
 LAB_CHOICE=${LAB_CHOICE:-1}
-case $LAB_CHOICE in
-    1) USER_LAB="DOT-WELL Photo Workshop" ;;
-    2) USER_LAB="Megatoni Production" ;;
-    3) USER_LAB="TrueFace Pro Lab 金鈿(真面目)" ;;
-    4) USER_LAB="Photo Garden 金藝" ;;
-    5) USER_LAB="HK Camera" ;;
-    6) USER_LAB="Showa" ;;
-    7) USER_LAB="Colorluxe Express 彩圖麗" ;;
-    8) USER_LAB="Lucky 樂凱" ;;
-    9) USER_LAB="Fiona" ;;
-    10)
-        echo -n "✍️ 請輸入自訂沖掃公司名稱: "
-        read CUSTOM_LAB
-        USER_LAB=$CUSTOM_LAB
-        ;;
-    *) echo "❌ 錯誤: 無效的沖掃公司選項。"; exit 1 ;;
-esac
+
+if [[ "$LAB_CHOICE" -eq "$OTHER_LAB" ]]; then
+    echo -n "✍️ 請輸入自訂沖掃公司名稱: "
+    read CUSTOM_LAB
+    USER_LAB=$CUSTOM_LAB
+elif [[ "$LAB_CHOICE" -ge 1 && "$LAB_CHOICE" -le "$#LABS" ]]; then
+    USER_LAB=$LABS[$LAB_CHOICE]
+else
+    echo "❌ 錯誤: 無效的沖掃公司選項。"; exit 1
+fi
 
 if [ -z "$USER_LAB" ]; then
     echo "❌ 錯誤: 沖掃公司名稱不能為空。"; exit 1
 fi
 
-# 5.1 要求選擇沖洗技術 (Developing Process)
+
+# 5.1 選擇沖洗技術
 echo "\n🧪 請選擇沖洗技術 (Developing Process):"
-echo "1) C-41 [預設]"
-echo "2) ECN-2"
-echo "3) E-6"
-echo "4) B&W"
-echo "5) B&W Reversal"
-echo -n "請輸入選項數字 (1-5，直接 Enter 則為 1): "
+for i in {1..$#PROCESSES}; do
+    [[ $i -eq 1 ]] && echo "$i) $PROCESSES[$i] [預設]" || echo "$i) $PROCESSES[$i]"
+done
+echo -n "請輸入選項數字 (1-$#PROCESSES，直接 Enter 則為 1): "
 read PROCESS_CHOICE
-
 PROCESS_CHOICE=${PROCESS_CHOICE:-1}
-case $PROCESS_CHOICE in
-    1) USER_PROCESS="C-41" ;;
-    2) USER_PROCESS="ECN-2" ;;
-    3) USER_PROCESS="E-6" ;;
-    4) USER_PROCESS="B&W" ;;
-    5) USER_PROCESS="B&W Reversal" ;;
-    *) echo "❌ 錯誤: 無效的沖洗技術選項。"; exit 1 ;;
-esac
 
-# 5.2 要求選擇曝光處理 (Push/Pull)
+if [[ "$PROCESS_CHOICE" -ge 1 && "$PROCESS_CHOICE" -le "$#PROCESSES" ]]; then
+    USER_PROCESS=$PROCESSES[$PROCESS_CHOICE]
+else
+    echo "❌ 錯誤: 無效的沖洗技術選項。"; exit 1
+fi
+
+
+# 5.2 選擇曝光處理
 echo "\n🎛️ 請選擇曝光處理 (Push/Pull):"
-echo "1) Normal [預設]"
-echo "2) Push +1"
-echo "3) Push +2"
-echo "4) Push +3"
-echo "5) Pull -1"
-echo "6) Pull -2"
-echo "7) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-7，直接 Enter 則為 1): "
+for i in {1..$#PUSHPULLS}; do
+    [[ $i -eq 1 ]] && echo "$i) $PUSHPULLS[$i] [預設]" || echo "$i) $PUSHPULLS[$i]"
+done
+OTHER_PP=$(( $#PUSHPULLS + 1 ))
+echo "$OTHER_PP) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_PP，直接 Enter 則為 1): "
 read PUSHPULL_CHOICE
-
 PUSHPULL_CHOICE=${PUSHPULL_CHOICE:-1}
-case $PUSHPULL_CHOICE in
-    1) USER_PUSHPULL="Normal" ;;
-    2) USER_PUSHPULL="Push +1" ;;
-    3) USER_PUSHPULL="Push +2" ;;
-    4) USER_PUSHPULL="Push +3" ;;
-    5) USER_PUSHPULL="Pull -1" ;;
-    6) USER_PUSHPULL="Pull -2" ;;
-    7)
-        echo -n "✍️ 請輸入自訂曝光處理 (例如 Push +1.5): "
-        read CUSTOM_PUSHPULL
-        USER_PUSHPULL=$CUSTOM_PUSHPULL
-        ;;
-    *) echo "❌ 錯誤: 無效的曝光處理選項。"; exit 1 ;;
-esac
 
-# 5.3 要求選擇掃描器 (Scanner)
+if [[ "$PUSHPULL_CHOICE" -eq "$OTHER_PP" ]]; then
+    echo -n "✍️ 請輸入自訂曝光處理 (例如 Push +1.5): "
+    read CUSTOM_PUSHPULL
+    USER_PUSHPULL=$CUSTOM_PUSHPULL
+elif [[ "$PUSHPULL_CHOICE" -ge 1 && "$PUSHPULL_CHOICE" -le "$#PUSHPULLS" ]]; then
+    USER_PUSHPULL=$PUSHPULLS[$PUSHPULL_CHOICE]
+else
+    echo "❌ 錯誤: 無效的曝光處理選項。"; exit 1
+fi
+
+
+# 5.3 選擇掃描器
 echo "\n🖨 請選擇掃描器 (Scanner):"
-echo "1) Noritsu HS-1800 [預設]"
-echo "2) Noritsu LS-600"
-echo "3) Fuji Frontier SP3000"
-echo "4) Hasselblad Flextight X1"
-echo "5) Hasselblad Flextight X5"
-echo "6) 其他 (自行輸入 Free text)"
-echo -n "請輸入選項數字 (1-6，直接 Enter 則為 1): "
+for i in {1..$#SCANNERS}; do
+    [[ $i -eq 1 ]] && echo "$i) $SCANNERS[$i] [預設]" || echo "$i) $SCANNERS[$i]"
+done
+OTHER_SCAN=$(( $#SCANNERS + 1 ))
+echo "$OTHER_SCAN) 其他 (自行輸入 Free text)"
+echo -n "請輸入選項數字 (1-$OTHER_SCAN，直接 Enter 則為 1): "
 read SCANNER_CHOICE
-
 SCANNER_CHOICE=${SCANNER_CHOICE:-1}
-case $SCANNER_CHOICE in
-    1) USER_SCANNER="Noritsu HS-1800" ;;
-    2) USER_SCANNER="Noritsu LS-600" ;;
-    3) USER_SCANNER="Fuji Frontier SP3000" ;;
-    4) USER_SCANNER="Hasselblad Flextight X1" ;;
-    5) USER_SCANNER="Hasselblad Flextight X5" ;;
-    6)
-        echo -n "✍️ 請輸入自訂掃描器名稱: "
-        read CUSTOM_SCANNER
-        USER_SCANNER=$CUSTOM_SCANNER
-        ;;
-    *) echo "❌ 錯誤: 無效的掃描器選項。"; exit 1 ;;
-esac
+
+if [[ "$SCANNER_CHOICE" -eq "$OTHER_SCAN" ]]; then
+    echo -n "✍️ 請輸入自訂掃描器名稱: "
+    read CUSTOM_SCANNER
+    USER_SCANNER=$CUSTOM_SCANNER
+elif [[ "$SCANNER_CHOICE" -ge 1 && "$SCANNER_CHOICE" -le "$#SCANNERS" ]]; then
+    USER_SCANNER=$SCANNERS[$SCANNER_CHOICE]
+else
+    echo "❌ 錯誤: 無效的掃描器選項。"; exit 1
+fi
 
 if [ -z "$USER_SCANNER" ]; then
     echo "❌ 錯誤: 掃描器名稱不能為空。"; exit 1
 fi
 
-# 6. 拍攝日期輸入（重構：支援 20260606 或 2026:06:06 雙格式自動相容與防呆）
+# ==========================================
+# ─── 6. 日期與卷號處理邏輯 ───
+# ==========================================
 while true; do
     echo -n "\n📅 請輸入拍攝日期 [格式 YYYYMMDD 或 YYYY:MM:DD，如 20260606，直接 Enter 則預設為今日]: "
     read DATE_INPUT
@@ -321,13 +313,10 @@ while true; do
         break
     fi
     
-    # 情況 A: 用戶輸入 8 位純數字 (YYYYMMDD)
     if [[ "$DATE_INPUT" =~ ^[0-9]{8}$ ]]; then
         FILE_DATE=$DATE_INPUT
-        # 利用 Zsh 原生切片 [start,end] 拼裝出 EXIF 標準冒號格式
         EXIF_DATE="${DATE_INPUT[1,4]}:${DATE_INPUT[5,6]}:${DATE_INPUT[7,8]}"
         break
-    # 情況 B: 用戶輸入標準 EXIF 格式 (YYYY:MM:DD)
     elif [[ "$DATE_INPUT" =~ ^[0-9]{4}:[0-1][0-9]:[0-3][0-9]$ ]]; then
         EXIF_DATE=$DATE_INPUT
         FILE_DATE="${DATE_INPUT//:/}"
@@ -337,7 +326,6 @@ while true; do
     fi
 done
 
-# 6.1 菲林卷號輸入 (嚴格驗證整數，Free Text Input)
 while true; do
     echo -n "\n🎞️ 請輸入這是第幾卷菲林 (Roll Number) [直接 Enter 則預設為 1]: "
     read ROLL_INPUT
@@ -351,10 +339,8 @@ while true; do
     fi
 done
 
-# 將 Roll 號格式化為雙位數帶首綴字串 (例如 Roll01, Roll02) 確保檔名整齊
 ROLL_PREFIX=$(printf "Roll%02d" $ROLL_NUM)
 
-# 6.2 拍攝開始時間設定 (手動或自動皆會依據 Roll 號疊加小時數)
 echo -n "\n⏰ 是否要手動輸入這卷菲林的基準開始時間？(y/N) [直接 Enter 則預設從 12 點開始加算]: "
 read TIME_CHOICE
 TIME_CHOICE=${TIME_CHOICE:l}
@@ -366,8 +352,6 @@ if [[ "$TIME_CHOICE" == "y" ]]; then
         if [[ "$CUSTOM_TIME" =~ ^([0-1][0-9]|2[0-3]):[0-5][0-9]$ ]]; then
             RAW_HOUR="${CUSTOM_TIME%%:*}"
             RAW_MIN="${CUSTOM_TIME##*:}"
-            
-            # 手動輸入也強制加上根據 Roll 號換算的 Offset 小時數
             BASE_HOUR=$(( 10#$RAW_HOUR + ROLL_NUM - 1 ))
             BASE_MIN=$(( 10#$RAW_MIN ))
             break
@@ -376,7 +360,6 @@ if [[ "$TIME_CHOICE" == "y" ]]; then
         fi
     done
 else
-    # 自動預設換算邏輯：Roll 1 為 12 點，Roll 2 為 13 點，如此類推
     BASE_HOUR=$(( 12 + ROLL_NUM - 1 ))
     BASE_MIN=0
 fi
@@ -404,18 +387,16 @@ echo "目標資料夾: $TARGET_DIR"
 echo "----------------------------------------\n"
 
 # ==========================================
-# ─── 7. 核心處理迴圈 (排序 -> 寫入 EXIF -> 重新命名) ───
+# ─── 7. 核心處理迴圈 ───
 # ==========================================
 echo "🚚 正在開始處理相片檔案..."
 
-# 預先處理命名所需的 Camel Case 字串變數
 CAMEL_LENS="${${(C)LENS_NAME}//[^a-zA-Z0-9]/}"
 CAMEL_FILM="${${(C)USER_FILM}//[^a-zA-Z0-9]/}"
 CAMEL_ARTIST="${${(C)AUTHOR_NAME}//[^a-zA-Z0-9]/}"
 
 PROCESSED_COUNT=0
 
-# Zsh 預設展開就會跟返 filename 由小至大排列 (Alphabetical Ascending)
 for file in "$TARGET_DIR"/*; do
     [ -f "$file" ] || continue
     ext="${file:e:l}"
@@ -424,16 +405,14 @@ for file in "$TARGET_DIR"/*; do
         base_name="${file:t}"
         dir_name="${file:h}"
         
-        # 1. 計算「每張加 1 分鐘」的精準進位時間
         SEC=$BASE_SEC
         MIN=$(( BASE_MIN + PROCESSED_COUNT ))  
         HR=$(( BASE_HOUR + MIN / 60 ))        
         MIN=$(( MIN % 60 ))
-        HR=$(( HR % 24 )) # 防止跨日溢出
+        HR=$(( HR % 24 ))
         
         CURRENT_TIME=$(printf "%02d:%02d:%02d" $HR $MIN $SEC)
         
-        # 2. 建立該檔案的 ExifTool 參數陣列（強制寫入時區 +08:00）
         exif_args=(
             -overwrite_original
             -Make="$USER_MAKE"
@@ -444,7 +423,7 @@ for file in "$TARGET_DIR"/*; do
             -LensModel="$LENS_NAME"
             -Lens="$LENS_NAME"
             -Software="$USER_SCANNER"
-            "-Software<\${Software} ($USER_SCANNER)"
+            '-Software<${Software} '"($USER_SCANNER)"
             -Instructions="$USER_PROCESS ($USER_PUSHPULL)"
             -AllDates="$EXIF_DATE $CURRENT_TIME+08:00"
             -XMP:DateCreated="$EXIF_DATE $CURRENT_TIME+08:00"
@@ -454,10 +433,8 @@ for file in "$TARGET_DIR"/*; do
             -XMP-dc:Description="Photo by $AUTHOR_NAME | Camera: $USER_MODEL ($LENS_NAME) | Film: $USER_FILM (ISO $USER_ISO) | Lab: $USER_LAB | Process: $USER_PROCESS ($USER_PUSHPULL) | Scanner: $USER_SCANNER"
         )
         
-        # 選擇性加入焦距
         [[ -n "$FOCAL_LENGTH" ]] && exif_args+=(-FocalLength="$FOCAL_LENGTH")
         
-        # 加入光圈相關欄位
         if [[ -n "$MAX_APERTURE" ]]; then
             exif_args+=(
                 -MaxApertureValue="$MAX_APERTURE"
@@ -466,20 +443,13 @@ for file in "$TARGET_DIR"/*; do
             )
         fi
         
-        # 3. 呼叫 ExifTool 寫入中繼資料
         /opt/homebrew/bin/exiftool "${exif_args[@]}" "$file" > /dev/null
         
-        # 4. 生成雙位數流水號 (01, 02, 03...)
         SERIAL_NUM=$(printf "%02d" $((PROCESSED_COUNT + 1)))
-        
-        # 5. 組合最終新檔名：FilmName_RollNumber_Date_流水號.ext
         new_name="${CAMEL_FILM}_${ROLL_PREFIX}_${FILE_DATE}_${SERIAL_NUM}.${ext}"
-        
-        # 6. 執行更名
         mv "$file" "$dir_name/$new_name"
         
         ((PROCESSED_COUNT++))
-        
         echo "✅ [$SERIAL_NUM] 已處理: $base_name -> $new_name (拍攝時間: $CURRENT_TIME)"
     fi
 done
