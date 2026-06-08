@@ -72,22 +72,27 @@ chmod +x fix-sony-hif-orientation.sh
 
 ### 3. 一體化修正上傳工具 (`fix-and-upload-sony-hif.sh`)
 
-本專案的最強自動化模組。實現「單一事實來源（Single Source of Truth）」，你只需要指定一個目標路徑，後續的 EXIF 修正與 Google Photos 上傳路徑會完全自動同步。
+本專案的最強自動化模組。實現「單一事實來源（Single Source of Truth）」，你可以直接透過指令參數動態指定**目標資料夾**與**雲端相簿名稱**，完全不需手動修改 `config.hjson`。
 
 #### 💡 核心自動化邏輯
 
-路徑自動實體化：將你傳入的任何相對/絕對路徑自動轉為標準「絕對路徑」。
+1. **路徑自動實體化**：將傳入的任何相對/絕對路徑自動轉為標準「絕對路徑」。
+2. **環境變數安全注入**：採用 Perl 調用環境變數環境進行設定檔改寫，完美避開路徑斜線（`/`）引發的正則表達式衝突。
+3. **動態相簿決策機制**：依據是否傳入第二參數，自動重寫為固定相簿或動態子資料夾相簿標籤。
 
-設定檔動態重寫：利用精確正則表達式，執行時自動將實體路徑覆寫進 `config.hjson` 內官方標準的 `SourceFolder` 欄位。
+#### 📖 多維度命令列參數使用指南
 
-流水線作業：自動遞迴修正該路徑下所有 HIF/HEIC 相片方向，完成後靜默啟動 `gphotos-uploader-cli push` 觸發備份。
+| 使用場景功能                         | 終端機執行指令範例                                 | config.hjson 欄位動態變更結果                                   | Google Photos 雲端實際相簿行為                                                         |
+| :----------------------------------- | :------------------------------------------------- | :-------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| **預設模式**<br>（動態子資料夾分類） | `./fix-and-upload-sony-hif.sh ./test`              | `SourceFolder: "/.../test"`<br>`Album: "template:%_directory%"` | 自動依據 `test` 內部的**最內層子資料夾名稱**在雲端各自建立對應相簿。                   |
+| **自訂模式**<br>（強制指定單一相簿） | `./fix-and-upload-sony-hif.sh ./test "2026 Tokyo"` | `SourceFolder: "/.../test"`<br>`Album: "name:2026 Tokyo"`       | 忽略子資料夾名稱，將該路徑下所有相片全部強行統一歸類到名為 **`2026 Tokyo`** 的相簿中。 |
 
 ```shell
 # 賦予執行權限
 chmod +x fix-and-upload-sony-hif.sh
 
 # 執行此指令，該子資料夾內的相片會完成修正，並精準同步上傳至 Google Photos
-./fix-and-upload-sony-hif.sh ~/Pictures/2026_Japan_Trip
+./fix-and-upload-sony-hif.sh ./test "2026 Tokyo"
 ```
 
 ### ⚙️ Google Photos CLI 組態與 Git 安全規範
