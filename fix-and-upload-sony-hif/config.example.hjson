@@ -1,0 +1,14 @@
+{
+  APIAppCredentials: {
+    ClientID: "YOUR_GOOGLE_CLIENT_ID_HERE"
+    ClientSecret: "YOUR_GOOGLE_CLIENT_SECRET_HERE"
+  }
+  Account: "YOUR_EMAIL@gmail.com"
+  SecretsBackendType: "file"
+  Jobs: [
+    {
+      SourceFolder: "./test"
+      Album: "template:%_directory%"
+    }
+  ]
+}

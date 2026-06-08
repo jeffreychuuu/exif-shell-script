@@ -1,1 +1,0 @@
-exiftool -if '$filename !~ /^\._/' "-Orientation<CameraOrientation" -overwrite_original -q -q -ext hif -ext HIF -ext heic -ext HEIC .

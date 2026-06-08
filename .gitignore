@@ -1,2 +1,10 @@
 .history
 .DS_Store
+
+# gphotos-uploader-cli 運行暫存與私密憑證
+tokens/
+uploaded_files/
+ongoing_uploads/
+
+# 包含個人私密 ClientID / ClientSecret 的實體設定檔
+config.hjson
