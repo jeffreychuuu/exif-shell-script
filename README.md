@@ -68,6 +68,42 @@ exif-shell-script/
 ./fix-sony-hif-orientation.sh /Users/jeffreychu/Pictures/SonyPics "Sony A7S3 Raw Backups"
 ```
 
+## 🛠️ 工具詳細說明與操作指南
+
+### 1. 菲林中繼資料寫入暨命名工具 (`film-exif-installer.sh`)
+
+此腳本專為底片掃描後的數位檔案（支援 `.jpg`, `.jpeg`, `.png`, `.tiff`, `.dng` 格式）設計。透過終端機互動式問答，補全傳統相機無法記錄的 EXIF 欄位並規範檔名。
+
+#### 💡 核心自動化邏輯
+
+- **動態選單與自訂輸入**：
+  - **作者 (Artist)**：內建 `Jeffrey Chu`、`Roger Chan`、`Tracy Tong`，支援 Free text 自訂輸入。
+  - **相機與鏡頭連動**：內建 `Leica MP`（連動 Summarit-M 35mm 等鏡頭）與 `Olympus OM-2Sp`（連動 Zuiko 50mm），亦支援完全自訂相機 Make/Model 及鏡頭焦距、最大光圈。
+  - **底片型號與 ISO 聯動**：內建 23 款常見底片（Kodak, Fujifilm, CineStill, Ilford 等）。選擇內建底片會自動帶入標準 ISO；選自訂底片則觸發 ISO 輸入提示。
+  - **沖掃紀錄**：內建香港主流沖掃工作室（DOT-WELL, Megatoni, TrueFace Pro Lab 金鈿, Photo Garden, HK Camera, Showa, Colorluxe, Lucky, Fiona）及自訂程序、曝光處理（Push/Pull）與掃描器型號。
+- **自訂時間基準與卷號遞增機制**：
+  - 支援互動式選取是否手動輸入基準開始時間（格式 `HH:MM`），若不輸入則預設由 `12:00` 開始。
+  - **卷號小時推移**：啟始小時會依卷號（Roll Number）自動疊加推移，公式為：`BASE_HOUR = 設定小時 + ROLL_NUM - 1`。例如設定 12 點開始，第 2 卷會自動從 13 點開始。
+  - **時間防錯排序**：為避免全卷相片因時間相同導致排序錯亂，每處理一張相片，時間戳記會**自動精準遞增 1 分鐘**，並強制寫入 `+08:00` 時區。
+
+#### ⚠️ 當前代碼命名規則限制說明
+
+重新命名後的檔案結構實際上**僅由底片型號、卷號、日期與流水號組成**：
+
+```text
+[底片駝峰字串]_[卷號字串]_[拍攝年月日]_[雙位數流水號].[原副檔名]
+```
+
+### 2. Sony HIF 方向修正工具 (`fix-sony-hif-orientation.sh`)
+
+部分看圖軟體或作業系統無法正確識別 Sony 相機產生的 .hif 或 .heic 檔案的旋轉角度。此腳本利用 ExifTool 批次讀取 CameraOrientation 中繼資料，並強制覆寫至標準的 Orientation 欄位中。
+
+#### 💡 核心自動化邏輯
+
+- 自動過濾系統產生的暫存檔（如 .\_ 開頭的檔案）。
+- 僅針對 .hif, .HIF, .heic, .HEIC 進行批次靜默處理 (-q -q)。
+- 直接覆寫原始檔案 (-overwrite_original)。
+
 ## 🔒 Git 安全規範與環境部署
 
 由於上傳組態涉及與 Google API 連動的私密憑證（OAuth Tokens），推送到遠端儲存庫前必須嚴格遵守安全規範。
