@@ -48,7 +48,7 @@ exif-shell-script/
 | 使用場景模式                                | 第二參數輸入範例   | `config.hjson` 欄位動態重寫結果                                     | Google Photos 雲端相簿實際行為                                                                                                      |
 | :------------------------------------------ | :----------------- | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------- |
 | **1. 純本地處理**<br>（不上傳雲端）         | _不填寫第二參數_   | _不觸發上傳流程，不改寫設定檔_                                      | 僅完成本地端相片的 EXIF 寫入、重新命名或方向修正，適合本機歸檔。                                                                    |
-| **2. 動態自動分類**<br>（依子資料夾建相簿） | **`auto`**         | `SourceFolder: "/.../實體路徑"`<br>`Album: "template:%_directory%"` | 自動依據相片所在的**最內層子資料夾名稱**，在雲端各自建立對應名稱的相簿進行分類。                                                    |
+| **2. 動態自動分類**<br>（依來源目錄名稱建相簿） | **`auto`**         | `SourceFolder: "/.../實體路徑"`<br>`Album: "name:<來源目錄名稱>"` | 自動提取來源目錄 (SourceFolder) 的最底層資料夾名稱作為雲端相簿名稱進行上傳。                                                    |
 | **3. 強制指定相簿**<br>（全數塞入特定相簿） | **`自訂相簿名稱`** | `SourceFolder: "/.../實體路徑"`<br>`Album: "name:自訂相簿名稱"`     | 忽略任何子資料夾結構，強制將該路徑下所有相片打包上傳至雲端指定名稱的單一相簿中。<br>⚠️ 支援含空格的名稱直接輸入，無需用 `""` 包住。 |
 
 ### 💻 指令執行範例
@@ -58,13 +58,15 @@ exif-shell-script/
 # 範例 A：處理菲林相片
 # ----------------------------------------------------
 # 僅進行本地 EXIF 寫入與重新命名
+film ./my_photos
+# 或使用完整腳本路徑
 ./film-exif-installer.sh ./my_photos
 
-# 處理菲林相片，並依據子資料夾名稱自動在 Google Photos 分相簿上傳
-./film-exif-installer.sh ./my_photos auto
+# 處理菲林相片，並以來源目錄名稱自動在 Google Photos 建立相簿上傳
+film ./my_photos auto
 
 # 處理菲林相片，並強制將所有相片上傳至雲端名為 "Leica MP 2026" 的相簿（直接輸入名稱即可，無需加 ""）
-./film-exif-installer.sh ./my_photos Leica MP 2026
+film ./my_photos Leica MP 2026
 
 # ----------------------------------------------------
 # 範例 B：修正 Sony HIF/HEIC 相片方向
@@ -78,6 +80,16 @@ exif-shell-script/
 # 遞迴修正方向，並強制全部同步至雲端名為 "Sony A7S3 Raw Backups" 的相簿
 ./fix-sony-hif-orientation.sh /Users/jeffreychu/Pictures/SonyPics "Sony A7S3 Raw Backups"
 ```
+
+### 🏷️ 建議：設定 `film` 命令別名
+
+為方便在任何目錄下快速執行，建議在 `~/.zshrc` 中加入以下 alias：
+
+```shell
+alias film="/path/to/exif-shell-script/film-exif-installer.sh"
+```
+
+加入後執行 `source ~/.zshrc` 即可生效。之後在任何路徑下直接輸入 `film <目錄> <相簿>` 即可運作。
 
 ## 🛠️ 工具詳細說明與操作指南
 

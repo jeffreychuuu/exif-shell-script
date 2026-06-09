@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+SCRIPT_DIR="${0:a:h}"
+
 # 1. 接收命令列參數 ($1: 目錄路徑, $2: 選填相簿名稱/auto)
 TARGET_DIR="${1:-.}"
 ALBUM_INPUT="${@:2}"
@@ -593,26 +595,27 @@ echo "\n🎉 處理完畢！共成功同步 EXIF 並生成標準化檔名共 $PR
 # ==========================================
 if [ -n "$ALBUM_INPUT" ]; then
     # 💡 偵測收納於新架構子目錄內的設定檔
-    if [ ! -f "./gphotos-config/config.hjson" ]; then
-        echo "⚠️ 警告: 找不到 ./gphotos-config/config.hjson 設定檔，跳過 Google Photos 上傳流程。"
+    if [ ! -f "$SCRIPT_DIR/gphotos-config/config.hjson" ]; then
+        echo "⚠️ 警告: 找不到 $SCRIPT_DIR/gphotos-config/config.hjson 設定檔，跳過 Google Photos 上傳流程。"
     else
         echo "\n🚚 [延伸自動化] 正在同步設定檔並上傳至 Google Photos..."
         ABS_PATH=$(cd "$TARGET_DIR" && pwd)
         
         # 強制更新指定子目錄內設定檔的 SourceFolder
-        TARGET_PATH="$ABS_PATH" perl -pi -e 's|^\s*\"?source(Folder)?\"?\s*[:=].*|      SourceFolder: "$ENV{TARGET_PATH}"|i' ./gphotos-config/config.hjson
+        TARGET_PATH="$ABS_PATH" perl -pi -e 's|^\s*\"?source(Folder)?\"?\s*[:=].*|      SourceFolder: "$ENV{TARGET_PATH}"|i' $SCRIPT_DIR/gphotos-config/config.hjson
 
         # 判斷相簿決策標籤
         if [[ "$ALBUM_INPUT" == "auto" ]]; then
-            echo "   -> 相簿設定：子資料夾動態範本 (template:%_directory%)"
-            ALBUM_VAL="template:%_directory%" perl -pi -e 's|^\s*\"?album\"?\s*[:=].*|      Album: "$ENV{ALBUM_VAL}"|i' ./gphotos-config/config.hjson
+            FOLDER_NAME=$(basename "$ABS_PATH")
+            echo "   -> 相簿設定：自動依據目錄命名 (name:$FOLDER_NAME)"
+            ALBUM_VAL="name:$FOLDER_NAME" perl -pi -e 's|^\s*\"?album\"?\s*[:=].*|      Album: "$ENV{ALBUM_VAL}"|i' $SCRIPT_DIR/gphotos-config/config.hjson
         else
             echo "   -> 相簿設定：強制指定為 name:$ALBUM_INPUT"
-            ALBUM_VAL="name:$ALBUM_INPUT" perl -pi -e 's|^\s*\"?album\"?\s*[:=].*|      Album: "$ENV{ALBUM_VAL}"|i' ./gphotos-config/config.hjson
+            ALBUM_VAL="name:$ALBUM_INPUT" perl -pi -e 's|^\s*\"?album\"?\s*[:=].*|      Album: "$ENV{ALBUM_VAL}"|i' $SCRIPT_DIR/gphotos-config/config.hjson
         fi
         
         # 指向正確的組態目錄執行上傳
-        gphotos-uploader-cli push --config ./gphotos-config
+        gphotos-uploader-cli push --config $SCRIPT_DIR/gphotos-config
         echo "🎉 菲林處理暨雲端上傳流程全面完成！"
     fi
 else
