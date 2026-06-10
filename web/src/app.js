@@ -395,9 +395,9 @@ function escXml(s) {
     }
     html += '</table></div>';
     if (isIPhone) {
-      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-save-btn">Process & Save to Album</button></div>';
+      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-save-btn">Save to Album</button></div>';
     } else {
-      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-zip-btn">Process & Download ZIP</button></div>';
+      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-zip-btn">Download ZIP</button></div>';
     }
 
     summaryBody.innerHTML = html;
