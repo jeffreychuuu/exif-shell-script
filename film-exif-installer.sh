@@ -12,9 +12,38 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 # ==========================================
-# ─── 資料參數定義區 (讀取自 web/data.zsh) ───
+# ─── 資料參數定義區 (讀取自 web/data.json) ───
 # ==========================================
-source "${SCRIPT_DIR}/web/data.zsh"
+DATA_JSON="${SCRIPT_DIR}/web/data.json"
+
+eval "$(DATA_JSON="$DATA_JSON" python3 -c '
+import json, os, sys
+with open(os.environ["DATA_JSON"]) as f:
+    d = json.load(f)
+
+print("AUTHORS=(" + " ".join("\"" + a + "\"" for a in d["authors"]) + ")")
+
+cam_entries = []
+for i, c in enumerate(d["cameras"]):
+    cam_entries.append("\"" + c["make"] + "|" + c["model"] + "\"")
+    lens_entries = []
+    for l in c["lenses"]:
+        lens_entries.append("\"" + l["name"] + "|" + l["focal"] + "|" + l["aperture"] + "\"")
+    if i == 0:
+        sys.stdout.write("LEICA_LENSES=(" + " ".join(lens_entries) + ")\n")
+    elif i == 1:
+        sys.stdout.write("OLYMPUS_LENSES=(" + " ".join(lens_entries) + ")\n")
+    elif i == 2:
+        sys.stdout.write("LOMOGRAPHY_SIMPLE_USE_LENSES=(" + " ".join(lens_entries) + ")\n")
+sys.stdout.write("CAMERAS=(" + " ".join(cam_entries) + ")\n")
+
+film_entries = ["\"" + f["name"] + "|" + f["iso"] + "\"" for f in d["films"]]
+sys.stdout.write("FILMS=(" + " ".join(film_entries) + ")\n")
+
+for key in ["labs", "processes", "pushpulls", "scanners"]:
+    entries = " ".join("\"" + v + "\"" for v in d[key])
+    sys.stdout.write(key.upper() + "=(" + entries + ")\n")
+')"
 
 # ==========================================
 # ─── 互動式選單邏輯區 ───
