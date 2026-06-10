@@ -113,6 +113,10 @@ function escXml(s) {
   var singleDateInp = $('single-date-input'), singleTimeInp = $('single-time-input');
   var fileInp = $('file-input'), uploadWrap = $('upload-wrap');
   var fileListEl = $('file-list'), reviewBtn = $('review-btn');
+  var saveBtn = $('save-btn'), zipBtn = $('zip-btn');
+  var gallery = $('gallery'), galleryGrid = $('gallery-grid'), galleryTitle = $('gallery-title');
+  var galleryZipBtn = $('gallery-zip-btn');
+  var isIPhone = /iPhone|iPad/.test(navigator.userAgent);
   var summaryPanel = $('summary-panel'), summaryBody = $('summary-body');
   var progressSec = $('progress-section'), progBar = $('progress-bar'), progText = $('progress-text');
   var statusMsg = $('status-msg');
@@ -251,6 +255,16 @@ function escXml(s) {
     segCount.textContent = uploadedFiles.length > 0 ? 'Total: ' + uploadedFiles.length + ' file(s) uploaded' : '';
     renderFileList();
     reviewBtn.disabled = uploadedFiles.length === 0;
+    if (uploadedFiles.length > 0 && isIPhone) {
+      saveBtn.style.display = 'inline-block';
+      zipBtn.style.display = 'inline-block';
+    } else if (uploadedFiles.length > 0) {
+      saveBtn.style.display = 'none';
+      zipBtn.style.display = 'inline-block';
+    } else {
+      saveBtn.style.display = 'none';
+      zipBtn.style.display = 'none';
+    }
   }
 
   function addSegment() {
@@ -279,7 +293,7 @@ function escXml(s) {
   }
 
   function renderFileList() {
-    if (uploadedFiles.length === 0) { fileListEl.innerHTML = ''; reviewBtn.disabled = true; segCount.textContent = ''; return; }
+    if (uploadedFiles.length === 0) { fileListEl.innerHTML = ''; reviewBtn.disabled = true; saveBtn.style.display = 'none'; zipBtn.style.display = 'none'; segCount.textContent = ''; return; }
     segCount.textContent = 'Total: ' + uploadedFiles.length + ' file(s) uploaded';
     var h = '<div class="file-list-header"><span>' + uploadedFiles.length + ' file(s)</span>' +
       '<button class="btn btn-sm btn-danger" onclick="clearAll()">Clear All</button></div>';
@@ -293,7 +307,6 @@ function escXml(s) {
         '</div>';
     }
     fileListEl.innerHTML = h;
-    reviewBtn.disabled = uploadedFiles.length === 0;
   }
 
   function clearAll() { uploadedFiles = []; refreshSegments(); }
@@ -392,17 +405,24 @@ function escXml(s) {
       html += '<tr><td style="color:#555;">' + idx + '</td><td class="old-name">' + esc(uploadedFiles[j].file.name) + '</td><td class="new-name">' + esc(nn) + '</td></tr>';
     }
     html += '</table></div>';
-    html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-btn">Process & Download ZIP</button></div>';
+    if (isIPhone) {
+      html += '<div class="actions" style="margin-top:1rem;">' +
+        '<button class="btn btn-primary" id="confirm-save-btn">Process & Save to Album</button>' +
+        '<button class="btn btn-primary" id="confirm-zip-btn">Process & Download ZIP</button></div>';
+    } else {
+      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-zip-btn">Process & Download ZIP</button></div>';
+    }
 
     summaryBody.innerHTML = html;
     summaryPanel.classList.add('show');
     summaryPanel.scrollIntoView({ behavior: 'smooth' });
-    $('confirm-btn').addEventListener('click', startProcess);
+    $('confirm-zip-btn').addEventListener('click', startZipProcess);
+    if (isIPhone) $('confirm-save-btn').addEventListener('click', startSaveProcess);
   });
 
   $('summary-close-btn').addEventListener('click', function() { summaryPanel.classList.remove('show'); });
 
-  function startProcess() {
+  function startZipProcess() {
     summaryPanel.classList.remove('show');
     var p = collect(), sgs = getSegments(uploadedFiles.length);
     if (!sgs) return showStatus('Date error', 'error');
@@ -510,6 +530,153 @@ function escXml(s) {
     doOne(0);
   }
 
+  var processedFiles = [];
+
+  function startSaveProcess() {
+    summaryPanel.classList.remove('show');
+    var p = collect(), sgs = getSegments(uploadedFiles.length);
+    if (!sgs) return showStatus('Date error', 'error');
+
+    reviewBtn.disabled = true;
+    progressSec.style.display = 'block';
+    statusMsg.className = 'status-msg'; statusMsg.style.display = 'none';
+    processedFiles = [];
+
+    var total = uploadedFiles.length, zip = new JSZip();
+
+    function doOne(i) {
+      if (i >= total) {
+        progText.textContent = 'Done! ' + total + ' file(s) processed.';
+        progressSec.style.display = 'none';
+        reviewBtn.disabled = false;
+        showGallery(processedFiles, p, zip);
+        return;
+      }
+      var entry = uploadedFiles[i], idx = i + 1, seg = segForIdx(sgs, idx);
+      var ts = calcTS(seg, idx), ext = entry.file.name.split('.').pop().toLowerCase();
+      var nn = newFName(p.film.name, seg, idx, ts.hr, ts.min, ext);
+
+      progBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
+      progText.textContent = 'Processing ' + (i + 1) + ' of ' + total;
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var bytes = new Uint8Array(e.target.result);
+
+        if (ext === 'jpg' || ext === 'jpeg') {
+          try {
+            var jpegStr = '';
+            for (var b = 0; b < bytes.length; b++) jpegStr += String.fromCharCode(bytes[b]);
+            var exifObj;
+            try { exifObj = piexif.load(jpegStr); } catch(_) {
+              exifObj = { '0th': {}, 'Exif': {}, 'GPS': {}, 'Interop': {}, '1st': {}, 'thumbnail': null };
+            }
+            exifObj['0th'][piexif.ImageIFD.Make] = p.camera.make;
+            exifObj['0th'][piexif.ImageIFD.Model] = p.camera.model;
+            exifObj['0th'][piexif.ImageIFD.Artist] = p.author;
+            exifObj['0th'][piexif.ImageIFD.Software] = p.scanner;
+            var dt = seg.exifDate + ' ' + ts.str + '+08:00';
+            exifObj['0th'][piexif.ImageIFD.DateTime] = dt;
+            exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = dt;
+            exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized] = dt;
+            exifObj['Exif'][piexif.ExifIFD.ISOSpeedRatings] = parseInt(p.film.iso, 10) || 400;
+            exifObj['Exif'][piexif.ExifIFD.LensModel] = p.lens.name;
+            if (p.lens.focal) {
+              var fl = parseFloat(p.lens.focal);
+              exifObj['Exif'][piexif.ExifIFD.FocalLength] = Number.isInteger(fl) ? [fl, 1] : [Math.round(fl * 100), 100];
+            }
+            if (p.lens.aperture) {
+              var ap = Math.round(parseFloat(p.lens.aperture) * 100);
+              exifObj['Exif'][piexif.ExifIFD.FNumber] = [ap, 100];
+              exifObj['Exif'][piexif.ExifIFD.MaxApertureValue] = [ap, 100];
+              exifObj['Exif'][piexif.ExifIFD.ApertureValue] = [ap, 100];
+            }
+            if (p.camera.shutter) {
+              var sf = p.camera.shutter.split('/');
+              if (sf.length === 2) {
+                exifObj['Exif'][piexif.ExifIFD.ExposureTime] = [parseInt(sf[0], 10), parseInt(sf[1], 10)];
+                exifObj['Exif'][piexif.ExifIFD.ShutterSpeedValue] = [parseInt(sf[0], 10), parseInt(sf[1], 10)];
+              }
+            }
+            exifObj['Exif'][piexif.ExifIFD.UserComment] =
+              'UNICODE\x00' + toUcs2Binary('Film Stock: ' + p.film.name + ' | Process: ' + p.process + ' | Exposure: ' + p.pushpull + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner);
+            exifObj['Exif'][0x828D] = p.process + ' (' + p.pushpull + ')';
+            exifObj['0th'][piexif.ImageIFD.ImageDescription] =
+              'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name + ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
+            exifObj['0th'][piexif.ImageIFD.Copyright] = 'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
+            var exifBytes = piexif.dump(exifObj);
+            var newStr = piexif.insert(exifBytes, jpegStr);
+            p.dateTime = dt;
+            newStr = injectXmp(newStr, p, p.lab, p.process, p.scanner);
+            bytes = new Uint8Array(newStr.length);
+            for (var b2 = 0; b2 < newStr.length; b2++) bytes[b2] = newStr.charCodeAt(b2) & 0xFF;
+          } catch(err) { console.warn('EXIF write failed', err); }
+        }
+
+        zip.file(nn, bytes, { binary: true });
+        processedFiles.push({ name: nn, blob: new Blob([bytes], { type: entry.file.type || 'image/jpeg' }) });
+        doOne(i + 1);
+      };
+      reader.readAsArrayBuffer(entry.file);
+    }
+    doOne(0);
+  }
+
+  function showGallery(files, params, zip) {
+    galleryTitle.textContent = files.length + ' file(s) ready';
+    galleryGrid.innerHTML = '';
+    for (var i = 0; i < files.length; i++) {
+      (function(f) {
+        var item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        var canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 200;
+        var ctx = canvas.getContext('2d');
+        var img = new Image();
+        img.onload = function() {
+          var scale = Math.min(200 / img.width, 200 / img.height);
+          var w = img.width * scale, h = img.height * scale;
+          ctx.drawImage(img, (200 - w) / 2, (200 - h) / 2, w, h);
+        };
+        img.src = URL.createObjectURL(f.blob);
+        item.appendChild(canvas);
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'g-name'; nameEl.textContent = f.name;
+        item.appendChild(nameEl);
+
+        var saveBtn2 = document.createElement('button');
+        saveBtn2.className = 'g-save-btn'; saveBtn2.textContent = 'Save';
+        saveBtn2.addEventListener('click', function() {
+          var file = new File([f.blob], f.name, { type: 'image/jpeg' });
+          if (navigator.share) {
+            navigator.share({ files: [file] }).catch(function(){});
+          } else {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(f.blob);
+            a.download = f.name;
+            a.click();
+          }
+        });
+        item.appendChild(saveBtn2);
+        galleryGrid.appendChild(item);
+      })(files[i]);
+    }
+    gallery.classList.add('show');
+    gallery.scrollIntoView({ behavior: 'smooth' });
+
+    galleryZipBtn.onclick = function() {
+      zip.generateAsync({ type: 'blob' }).then(function(blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'film_exif_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.zip';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      });
+    };
+  }
+
   function showStatus(msg, type) {
     statusMsg.textContent = msg; statusMsg.className = 'status-msg ' + type; statusMsg.style.display = 'block';
   }
@@ -523,6 +690,7 @@ function escXml(s) {
     sameDateSel.value = 'yes'; sameDateSel.dispatchEvent(new Event('change'));
     segContainer.innerHTML = ''; uploadedFiles = [];
     summaryPanel.classList.remove('show'); summaryBody.innerHTML = '';
+    gallery.classList.remove('show'); galleryGrid.innerHTML = '';
     progressSec.style.display = 'none'; progBar.style.width = '0%';
     statusMsg.className = 'status-msg'; statusMsg.style.display = 'none';
     updateLensUI(); refreshSegments();
