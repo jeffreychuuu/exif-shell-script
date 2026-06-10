@@ -113,7 +113,6 @@ function escXml(s) {
   var singleDateInp = $('single-date-input'), singleTimeInp = $('single-time-input');
   var fileInp = $('file-input'), uploadWrap = $('upload-wrap');
   var fileListEl = $('file-list'), reviewBtn = $('review-btn');
-  var saveBtn = $('save-btn'), zipBtn = $('zip-btn');
   var gallery = $('gallery'), galleryGrid = $('gallery-grid'), galleryTitle = $('gallery-title');
   var galleryZipBtn = $('gallery-zip-btn');
   var isIPhone = /iPhone|iPad/.test(navigator.userAgent);
@@ -255,16 +254,6 @@ function escXml(s) {
     segCount.textContent = uploadedFiles.length > 0 ? 'Total: ' + uploadedFiles.length + ' file(s) uploaded' : '';
     renderFileList();
     reviewBtn.disabled = uploadedFiles.length === 0;
-    if (uploadedFiles.length > 0 && isIPhone) {
-      saveBtn.style.display = 'inline-block';
-      zipBtn.style.display = 'inline-block';
-    } else if (uploadedFiles.length > 0) {
-      saveBtn.style.display = 'none';
-      zipBtn.style.display = 'inline-block';
-    } else {
-      saveBtn.style.display = 'none';
-      zipBtn.style.display = 'none';
-    }
   }
 
   function addSegment() {
@@ -293,7 +282,7 @@ function escXml(s) {
   }
 
   function renderFileList() {
-    if (uploadedFiles.length === 0) { fileListEl.innerHTML = ''; reviewBtn.disabled = true; saveBtn.style.display = 'none'; zipBtn.style.display = 'none'; segCount.textContent = ''; return; }
+    if (uploadedFiles.length === 0) { fileListEl.innerHTML = ''; reviewBtn.disabled = true; segCount.textContent = ''; return; }
     segCount.textContent = 'Total: ' + uploadedFiles.length + ' file(s) uploaded';
     var h = '<div class="file-list-header"><span>' + uploadedFiles.length + ' file(s)</span>' +
       '<button class="btn btn-sm btn-danger" onclick="clearAll()">Clear All</button></div>';
