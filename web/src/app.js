@@ -117,6 +117,38 @@ function escXml(s) {
   var progressSec = $('progress-section'), progBar = $('progress-bar'), progText = $('progress-text');
   var statusMsg = $('status-msg');
 
+  // Populate all select elements from DATA
+  function fillSelect(sel, items) {
+    for (var i = 0; i < items.length; i++) {
+      var o = document.createElement('option');
+      o.textContent = items[i];
+      sel.appendChild(o);
+    }
+  }
+  function fillSelectWithCustom(sel, items) {
+    fillSelect(sel, items);
+    var oo = document.createElement('option');
+    oo.value = '__custom__'; oo.textContent = 'Other (free text)'; sel.appendChild(oo);
+  }
+  fillSelectWithCustom(authorSel, DATA.authors);
+  fillSelectWithCustom(cameraSel, DATA.cameras.map(function(c) { return c.model; }));
+  fillSelectWithCustom(labSel, DATA.labs);
+  fillSelectWithCustom(scanSel, DATA.scanners);
+  fillSelectWithCustom(ppSel, DATA.pushpulls);
+  fillSelect($('process-select'), DATA.processes);
+
+  (function() {
+    filmSel.innerHTML = '';
+    for (var i = 0; i < DATA.films.length; i++) {
+      var o = document.createElement('option');
+      o.textContent = DATA.films[i].name;
+      o.setAttribute('data-iso', DATA.films[i].iso);
+      filmSel.appendChild(o);
+    }
+    var oo = document.createElement('option');
+    oo.value = '__custom__'; oo.textContent = 'Other (free text)'; filmSel.appendChild(oo);
+  })();
+
   function esc(s) {
     var d = document.createElement('div');
     d.appendChild(document.createTextNode(s));
