@@ -12,71 +12,43 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 # ==========================================
-# ─── 資料參數定義區 ───
+# ─── 資料參數定義區 (讀取自 web/data.json) ───
 # ==========================================
-AUTHORS=("Jeffrey Chu" "Roger Chan" "Tracy Tong")
+DATA_JSON="${SCRIPT_DIR}/web/data.json"
 
-# 格式: "Make|Model"
-CAMERAS=(
-    "Leica Camera AG|Leica MP"
-    "Olympus|Olympus OM-2Sp"
-    "Lomography|Lomography Simple Use"
-)
+eval "$(python3 -c "
+import json
+with open('$DATA_JSON') as f:
+    d = json.load(f)
 
-# 格式: "LensName|FocalLength|MaxAperture"
-LEICA_LENSES=(
-    "Leica Summarit-M 35mm F/2.5|35|2.5"
-    "Leica Elmarit-M 28mm F/2.8|28|2.8"
-)
-OLYMPUS_LENSES=(
-    "OM-System Zuiko 50mm F/1.4|50|1.4"
-)
-LOMOGRAPHY_SIMPLE_USE_LENSES=(
-    "Plastic Lens 35mm F/9|35|9"
-)
+# Authors
+print('AUTHORS=(' + ' '.join(f'\"{a}\"' for a in d['authors']) + ')')
 
-# 格式: "FilmStockName|ISO"
-FILMS=(
-    "Kodak Ultramax 400|400"
-    "Kodak Gold 200|200"
-    "Kodak ColorPlus 200|200"
-    "Kodak Ektar 100|100"
-    "Kodak Portra 160|160"
-    "Kodak Portra 400|400"
-    "Kodak Portra 800|800"
-    "Kodak Ektacolor Pro 160|160"
-    "Kodak Ektacolor Pro 400|400"
-    "Kodak Ektacolor Pro 800|800"
-    "Fujicolor C200|200"
-    "Fujicolor Superia Premium 400|400"
-    "Lucky C200|200"
-    "Crystal 250D AHU - 5207|250"
-    "Crystal 250D AHU - 5219|500"
-    "CineStill 50D|50"
-    "CineStill 400D|400"
-    "CineStill 800T|800"
-    "Ilford Pan 100|100"
-    "Ilford Pan 400|400"
-    "FilmNeverDie IRO 400|400"
-    "Retocolor Maple 100|100"
-    "CAMDI Lost in Tokyo 500|500"
-)
+# Cameras (flat format: Make|Model)
+cam_entries = []
+for i, c in enumerate(d['cameras']):
+    cam_entries.append(f'\"{c[\"make\"]}|{c[\"model\"]}\"')
+    # Lens array per camera
+    lens_entries = []
+    for l in c['lenses']:
+        lens_entries.append(f'\"{l[\"name\"]}|{l[\"focal\"]}|{l[\"aperture\"]}\"')
+    if i == 0:
+        print(f'LEICA_LENSES=({' '.join(lens_entries)})')
+    elif i == 1:
+        print(f'OLYMPUS_LENSES=({' '.join(lens_entries)})')
+    elif i == 2:
+        print(f'LOMOGRAPHY_SIMPLE_USE_LENSES=({' '.join(lens_entries)})')
+print(f'CAMERAS=({' '.join(cam_entries)})')
 
-LABS=(
-    "DOT-WELL Photo Workshop"
-    "Megatoni Production"
-    "TrueFace Pro Lab 金鈿(真面目)"
-    "Photo Garden 金藝"
-    "HK Camera"
-    "Showa"
-    "Colorluxe Express 彩圖麗"
-    "Lucky 樂凱"
-    "Fiona"
-)
+# Films
+film_entries = [f'\"{f[\"name\"]}|{f[\"iso\"]}\"' for f in d['films']]
+print(f'FILMS=({' '.join(film_entries)})')
 
-PROCESSES=("C-41" "ECN-2" "E-6" "B&W" "B&W Reversal")
-PUSHPULLS=("Normal" "Push +1" "Push +2" "Push +3" "Pull -1" "Pull -2")
-SCANNERS=("Noritsu HS-1800" "Noritsu LS-600" "Fuji Frontier SP3000" "Hasselblad Flextight X1" "Hasselblad Flextight X5")
+# Simple arrays
+for key in ['labs', 'processes', 'pushpulls', 'scanners']:
+    entries = ' '.join(f'\"{v}\"' for v in d[key])
+    print(f'{key.upper()}=({entries})')
+")
 
 # ==========================================
 # ─── 互動式選單邏輯區 ───

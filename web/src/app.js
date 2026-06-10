@@ -1,5 +1,6 @@
 import piexif from 'piexifjs';
 import JSZip from 'jszip';
+import DATA from '../data.json';
 
 // Register custom EXIF tags used by exiftool -Instructions
 piexif.TAGS.Exif[0x828D] = { name: 'Instructions', type: 'Ascii' };
@@ -94,21 +95,7 @@ function escXml(s) {
 (function() {
   'use strict';
 
-  var LEICA_LENSES = [
-    { name: "Leica Summarit-M 35mm F/2.5", focal: "35", aperture: "2.5" },
-    { name: "Leica Elmarit-M 28mm F/2.8", focal: "28", aperture: "2.8" }
-  ];
-  var OLYMPUS_LENSES = [
-    { name: "OM-System Zuiko 50mm F/1.4", focal: "50", aperture: "1.4" }
-  ];
-  var LOMOGRAPHY_LENSES = [
-    { name: "Plastic Lens 35mm F/9", focal: "35", aperture: "9" }
-  ];
-  var CAMERAS = [
-    { make: "Leica Camera AG", model: "Leica MP", lenses: LEICA_LENSES, shutter: null },
-    { make: "Olympus", model: "Olympus OM-2Sp", lenses: OLYMPUS_LENSES, shutter: null },
-    { make: "Lomography", model: "Lomography Simple Use", lenses: LOMOGRAPHY_LENSES, shutter: "1/120" }
-  ];
+  var CAMERAS = DATA.cameras;
 
   var $ = function(id) { return document.getElementById(id); };
   var uploadedFiles = [];
