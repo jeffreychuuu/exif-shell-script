@@ -394,18 +394,15 @@ function escXml(s) {
       html += '<tr><td style="color:#555;">' + idx + '</td><td class="old-name">' + esc(uploadedFiles[j].file.name) + '</td><td class="new-name">' + esc(nn) + '</td></tr>';
     }
     html += '</table></div>';
-    if (isIPhone) {
-      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-save-btn">Save to Album</button></div>';
-    } else {
-      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-zip-btn">Download ZIP</button></div>';
-    }
+    html += '<div class="actions" style="margin-top:1rem;">' +
+      '<button class="btn btn-primary" id="confirm-save-btn">Save to Album</button>' +
+      '<button class="btn btn-primary" id="confirm-zip-btn">Download ZIP</button></div>';
 
     summaryBody.innerHTML = html;
     summaryPanel.classList.add('show');
     summaryPanel.scrollIntoView({ behavior: 'smooth' });
-    var confirmZipBtn = $('confirm-zip-btn');
-    if (confirmZipBtn) confirmZipBtn.addEventListener('click', startZipProcess);
-    if (isIPhone) $('confirm-save-btn').addEventListener('click', startSaveProcess);
+    $('confirm-zip-btn').addEventListener('click', startZipProcess);
+    $('confirm-save-btn').addEventListener('click', startSaveProcess);
   });
 
   $('summary-close-btn').addEventListener('click', function() { summaryPanel.classList.remove('show'); });
