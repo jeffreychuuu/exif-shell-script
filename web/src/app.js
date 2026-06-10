@@ -131,6 +131,14 @@ function escXml(s) {
     oo.value = '__custom__'; oo.textContent = 'Other (free text)'; sel.appendChild(oo);
   }
   fillSelectWithCustom(authorSel, DATA.authors);
+
+  if (window.location.hostname === 'film-exif-installer.jeffreychuuu.com') {
+    authorSel.innerHTML = '';
+    var o = document.createElement('option');
+    o.textContent = 'Jeffrey Chu';
+    authorSel.appendChild(o);
+  }
+
   fillSelectWithCustom(cameraSel, DATA.cameras.map(function(c) { return c.model; }));
   fillSelectWithCustom(labSel, DATA.labs);
   fillSelectWithCustom(scanSel, DATA.scanners);
