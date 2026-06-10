@@ -14,7 +14,7 @@ fi
 # ==========================================
 # ─── 資料參數定義區 (讀取自 web/data.json) ───
 # ==========================================
-DATA_JSON="${SCRIPT_DIR}/web/data.json"
+DATA_JSON="${SCRIPT_DIR}/data.json"
 
 eval "$(DATA_JSON="$DATA_JSON" python3 -c '
 import json, os, sys

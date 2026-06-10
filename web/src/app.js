@@ -1,6 +1,6 @@
 import piexif from 'piexifjs';
 import JSZip from 'jszip';
-import DATA from '../data.json';
+import DATA from '../../data.json';
 
 // Register custom EXIF tags used by exiftool -Instructions
 piexif.TAGS.Exif[0x828D] = { name: 'Instructions', type: 'Ascii' };
