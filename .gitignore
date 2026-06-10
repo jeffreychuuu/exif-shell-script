@@ -12,6 +12,8 @@ web/dist/
 !web/public/favicon-16.png
 !web/public/favicon-32.png
 !web/public/toro.jpeg
+!web/public/toro2.jpg
+!web/public/mallow.jpg
 
 # 忽略 gphotos-config 資料夾內的所有運行暫存與實體私鑰
 gphotos-config/*

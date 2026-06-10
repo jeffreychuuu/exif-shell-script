@@ -183,6 +183,40 @@
       text-align: center; padding: 2rem 0 1rem; margin-top: 2rem;
       border-top: 1px solid var(--border); font-size: 0.72rem; color: #555;
     }
+
+    .easter-egg-btn {
+      position: fixed; bottom: 16px; right: 16px;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 1.4rem; cursor: pointer; z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.4; transition: opacity 0.2s;
+    }
+    .easter-egg-btn:hover { opacity: 1; }
+
+    .egg-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+      z-index: 1000; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .egg-overlay.show { display: flex; }
+
+    .egg-close {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none; color: #fff; font-size: 1.5rem;
+      cursor: pointer; z-index: 1001;
+    }
+
+    .egg-images {
+      display: flex; gap: 1rem; max-width: 90vw; max-height: 80vh;
+      align-items: center; justify-content: center;
+    }
+    .egg-images img {
+      max-width: 45%; max-height: 80vh; object-fit: contain; border-radius: 4px;
+    }
+    @media (max-width: 480px) {
+      .egg-images { flex-direction: column; }
+      .egg-images img { max-width: 90%; max-height: 45vh; }
+    }
   </style>
 </head>
 <body>
@@ -344,6 +378,16 @@
 </div>
 
 <footer>Made by Jeffrey Chu (99% Agentic AI, 1% 🐈 Supervision &amp; 🥃)</footer>
+
+<div class="easter-egg-btn" id="easter-egg-btn">🐈</div>
+
+<div class="egg-overlay" id="egg-overlay">
+  <button class="egg-close" id="egg-close">✕</button>
+  <div class="egg-images">
+    <img src="toro2.jpg" alt="">
+    <img src="mallow.jpg" alt="">
+  </div>
+</div>
 
 <script src="bundle.js"></script>
 </body>

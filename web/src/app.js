@@ -685,4 +685,14 @@ function escXml(s) {
   });
 
   updateLensUI();
+
+  $('easter-egg-btn').addEventListener('click', function() {
+    $('egg-overlay').classList.add('show');
+  });
+  $('egg-close').addEventListener('click', function() {
+    $('egg-overlay').classList.remove('show');
+  });
+  $('egg-overlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+  });
 })();
