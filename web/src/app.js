@@ -1,6 +1,44 @@
 import piexif from 'piexifjs';
 import JSZip from 'jszip';
 
+// Register custom EXIF tags used by exiftool -Instructions
+piexif.TAGS.Exif[0x828D] = { name: 'Instructions', type: 'Ascii' };
+
+function strToUtf8Binary(s) {
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c < 0x80) {
+      out += String.fromCharCode(c);
+    } else if (c < 0x800) {
+      out += String.fromCharCode(0xC0 | (c >> 6));
+      out += String.fromCharCode(0x80 | (c & 0x3F));
+    } else if (c >= 0xD800 && c < 0xE000) {
+      var c2 = s.charCodeAt(i + 1);
+      var cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+      out += String.fromCharCode(0xF0 | (cp >> 18));
+      out += String.fromCharCode(0x80 | ((cp >> 12) & 0x3F));
+      out += String.fromCharCode(0x80 | ((cp >> 6) & 0x3F));
+      out += String.fromCharCode(0x80 | (cp & 0x3F));
+      i++;
+    } else {
+      out += String.fromCharCode(0xE0 | (c >> 12));
+      out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
+      out += String.fromCharCode(0x80 | (c & 0x3F));
+    }
+  }
+  return out;
+}
+
+function toUcs2Binary(s) {
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    out += String.fromCharCode(c & 0xFF, (c >> 8) & 0xFF);
+  }
+  return out;
+}
+
 // Inject XMP Label, Credit, and Description into JPEG binary string
 function injectXmp(jpegStr, params, lab, process, scanner) {
   var xmpXML = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' +
@@ -9,19 +47,25 @@ function injectXmp(jpegStr, params, lab, process, scanner) {
     '<rdf:Description rdf:about=""' +
     ' xmlns:xmp="http://ns.adobe.com/xap/1.0/"' +
     ' xmlns:dc="http://purl.org/dc/elements/1.1/"' +
-    ' xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">' +
+    ' xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"' +
+    ' xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">' +
     '<xmp:Label>' + escXml(params.film.name + ' (' + params.pushpull + ')') + '</xmp:Label>' +
+    '<xmp:Creator>' + escXml(params.author) + '</xmp:Creator>' +
     '<photoshop:Credit>' + escXml('Processed by ' + lab + ' (' + process + ') | Scanned via ' + scanner) + '</photoshop:Credit>' +
+    '<xmp:DateCreated>' + escXml(params.dateTime) + '</xmp:DateCreated>' +
+    '<dc:creator>' + escXml(params.author) + '</dc:creator>' +
     '<dc:description>' + escXml('Photo by ' + params.author + ' | Camera: ' + params.camera.model + ' (' + params.lens.name + ') | Film: ' + params.film.name + ' (ISO ' + params.film.iso + ')' + (params.camera.shutter ? ' | Shutter: ' + params.camera.shutter : '') + ' | Lab: ' + lab + ' | Process: ' + process + ' (' + params.pushpull + ') | Scanner: ' + scanner) + '</dc:description>' +
     '</rdf:Description>' +
     '</rdf:RDF>' +
     '</x:xmpmeta>' +
     '<?xpacket end="w"?>';
 
-  var xmpBytes = 'http://ns.adobe.com/xap/1.0/\x00' + xmpXML;
+  var xmpUtf8 = strToUtf8Binary(xmpXML);
+  var xmpData = 'http://ns.adobe.com/xap/1.0/\x00' + xmpUtf8;
+  var segLen = xmpData.length + 2;
   var xmpSegment = '\xFF\xE1' +
-    String.fromCharCode((xmpBytes.length + 2) >> 8, (xmpBytes.length + 2) & 0xFF) +
-    xmpBytes;
+    String.fromCharCode(segLen >> 8, segLen & 0xFF) +
+    xmpData;
 
   // Remove existing XMP APP1 segments
   var cleaned = '';
@@ -29,15 +73,14 @@ function injectXmp(jpegStr, params, lab, process, scanner) {
   while (pos < jpegStr.length) {
     if (jpegStr.charCodeAt(pos) === 0xFF && jpegStr.charCodeAt(pos + 1) === 0xE1 &&
         jpegStr.slice(pos + 4, pos + 33) === 'http://ns.adobe.com/xap/1.0/\x00') {
-      var segLen = (jpegStr.charCodeAt(pos + 2) << 8) | jpegStr.charCodeAt(pos + 3);
-      pos += 2 + segLen;
+      var segLen2 = (jpegStr.charCodeAt(pos + 2) << 8) | jpegStr.charCodeAt(pos + 3);
+      pos += 2 + segLen2;
     } else {
       cleaned += jpegStr.charAt(pos);
       pos++;
     }
   }
 
-  // Insert XMP after SOI (FF D8)
   if (cleaned.charCodeAt(0) === 0xFF && cleaned.charCodeAt(1) === 0xD8) {
     return cleaned.slice(0, 2) + xmpSegment + cleaned.slice(2);
   }
@@ -381,8 +424,9 @@ function escXml(s) {
             exifObj['0th'][piexif.ImageIFD.Model] = p.camera.model;
             exifObj['0th'][piexif.ImageIFD.Artist] = p.author;
             exifObj['0th'][piexif.ImageIFD.Software] = p.scanner;
+            exifObj['Exif'][0x828D] = p.process + ' (' + p.pushpull + ')';
 
-            var dateTimeStr = seg.exifDate + ' ' + ts.str;
+            var dateTimeStr = seg.exifDate + ' ' + ts.str + '+08:00';
             exifObj['0th'][piexif.ImageIFD.DateTime] = dateTimeStr;
             exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = dateTimeStr;
             exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized] = dateTimeStr;
@@ -407,9 +451,10 @@ function escXml(s) {
               }
             }
 
-            exifObj['Exif'][piexif.ExifIFD.UserComment] = ['ASCII',
+            exifObj['Exif'][piexif.ExifIFD.UserComment] =
+              'UNICODE\x00' + toUcs2Binary(
               'Film Stock: ' + p.film.name + ' | Process: ' + p.process + ' | Exposure: ' + p.pushpull +
-              (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner];
+              (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner);
 
             exifObj['0th'][piexif.ImageIFD.ImageDescription] =
               'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name +
@@ -421,6 +466,7 @@ function escXml(s) {
 
             var exifBytes = piexif.dump(exifObj);
             var newStr = piexif.insert(exifBytes, jpegStr);
+            p.dateTime = dateTimeStr;
             newStr = injectXmp(newStr, p, p.lab, p.process, p.scanner);
             bytes = new Uint8Array(newStr.length);
             for (var b2 = 0; b2 < newStr.length; b2++) bytes[b2] = newStr.charCodeAt(b2) & 0xFF;
