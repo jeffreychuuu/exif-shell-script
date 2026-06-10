@@ -55,7 +55,7 @@ function injectXmp(jpegStr, params, lab, process, scanner) {
     '<photoshop:Credit>' + escXml('Processed by ' + lab + ' (' + process + ') | Scanned via ' + scanner) + '</photoshop:Credit>' +
     '<xmp:DateCreated>' + escXml(params.dateTime) + '</xmp:DateCreated>' +
     '<dc:creator>' + escXml(params.author) + '</dc:creator>' +
-    (params.publicDesc ? '<dc:description>' + escXml('Photo by ' + params.author + ' | Camera: ' + params.camera.model + ' (' + params.lens.name + ') | Film: ' + params.film.name + ' (ISO ' + params.film.iso + ')' + (params.camera.shutter ? ' | Shutter: ' + params.camera.shutter : '') + ' | Lab: ' + lab + ' | Process: ' + process + ' (' + params.pushpull + ') | Scanner: ' + scanner) + '</dc:description>' : '') +
+    (params.publicDesc ? '<dc:description>' + escXml('FilmTag by Jeffrey Chu — Photo by ' + params.author + ' | Camera: ' + params.camera.model + ' (' + params.lens.name + ') | Film: ' + params.film.name + ' (ISO ' + params.film.iso + ')' + (params.camera.shutter ? ' | Shutter: ' + params.camera.shutter : '') + ' | Lab: ' + lab + ' | Process: ' + process + ' (' + params.pushpull + ') | Scanner: ' + scanner) + '</dc:description>' : '<dc:description>' + escXml('Photo by ' + params.author + ' | Camera: ' + params.camera.model + ' (' + params.lens.name + ') | Film: ' + params.film.name + ' (ISO ' + params.film.iso + ')' + (params.camera.shutter ? ' | Shutter: ' + params.camera.shutter : '') + ' | Lab: ' + lab + ' | Process: ' + process + ' (' + params.pushpull + ') | Scanner: ' + scanner) + '</dc:description>') +
     '</rdf:Description>' +
     '</rdf:RDF>' +
     '</x:xmpmeta>' +
@@ -494,13 +494,12 @@ function escXml(s) {
               'Film Stock: ' + p.film.name + ' | Process: ' + p.process + ' | Exposure: ' + p.pushpull +
               (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner);
 
-            if ($('public-checkbox').checked) {
-              exifObj['0th'][piexif.ImageIFD.ImageDescription] =
-                (brand ? 'FilmTag by Jeffrey Chu — ' : '') +
-                'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name +
-                ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') +
-                ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
-            }            exifObj['0th'][piexif.ImageIFD.Copyright] =
+                        exifObj['0th'][piexif.ImageIFD.ImageDescription] =
+              (brand ? 'FilmTag by Jeffrey Chu — ' : '') +
+              'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name +
+              ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') +
+              ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
+            exifObj['0th'][piexif.ImageIFD.Copyright] =
               (brand ? 'FilmTag by Jeffrey Chu | ' : '') +
               'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
 
