@@ -137,6 +137,8 @@ function escXml(s) {
     var o = document.createElement('option');
     o.textContent = 'Jeffrey Chu';
     authorSel.appendChild(o);
+    var oo = document.createElement('option');
+    oo.value = '__custom__'; oo.textContent = 'Other (free text)'; authorSel.appendChild(oo);
   }
 
   fillSelectWithCustom(cameraSel, DATA.cameras.map(function(c) { return c.model; }));
