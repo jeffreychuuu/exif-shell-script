@@ -63,7 +63,7 @@ npm run dev       # 啟動 http://localhost:3333
 2. 在 Vercel 中 import repo，Root Directory 設為 `web`
 3. Vercel 自動執行 `npm run build`，部署 `dist/` 目錄
 
-**Live**: [film-exif-installer.jeffreychuuu.com](https://film-exif-installer.jeffreychuuu.com)
+**Live**: [filmtag.jeffreychuuu.com](https://filmtag.jeffreychuuu.com)
 
 ## 📦 Homebrew 依賴套件
 

@@ -135,7 +135,7 @@ function escXml(s) {
   }
   fillSelectWithCustom(authorSel, DATA.authors);
 
-  if (window.location.hostname === 'film-exif-installer.jeffreychuuu.com') {
+  if (window.location.hostname === 'filmtag.jeffreychuuu.com' || window.location.hostname === 'film-exif-installer.jeffreychuuu.com') {
     authorSel.innerHTML = '';
     var o = document.createElement('option');
     o.textContent = 'Jeffrey Chu';
@@ -424,8 +424,7 @@ function escXml(s) {
         zip.generateAsync({ type: 'blob' }).then(function(blob) {
           var url = URL.createObjectURL(blob), a = document.createElement('a');
           a.href = url;
-          a.download = 'film_exif_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.zip';
-          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+          a.download = 'filmtag_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.zip';          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
           progBar.style.width = '100%'; progText.textContent = 'Done! ' + total + ' file(s) processed.';
           showStatus(total + ' file(s) processed successfully', 'success');
           reviewBtn.disabled = false;
