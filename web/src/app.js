@@ -395,9 +395,7 @@ function escXml(s) {
     }
     html += '</table></div>';
     if (isIPhone) {
-      html += '<div class="actions" style="margin-top:1rem;">' +
-        '<button class="btn btn-primary" id="confirm-save-btn">Process & Save to Album</button>' +
-        '<button class="btn btn-primary" id="confirm-zip-btn">Process & Download ZIP</button></div>';
+      html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-save-btn">Process & Save to Album</button></div>';
     } else {
       html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-zip-btn">Process & Download ZIP</button></div>';
     }
@@ -405,7 +403,8 @@ function escXml(s) {
     summaryBody.innerHTML = html;
     summaryPanel.classList.add('show');
     summaryPanel.scrollIntoView({ behavior: 'smooth' });
-    $('confirm-zip-btn').addEventListener('click', startZipProcess);
+    var confirmZipBtn = $('confirm-zip-btn');
+    if (confirmZipBtn) confirmZipBtn.addEventListener('click', startZipProcess);
     if (isIPhone) $('confirm-save-btn').addEventListener('click', startSaveProcess);
   });
 
