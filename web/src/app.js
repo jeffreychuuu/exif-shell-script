@@ -116,6 +116,10 @@ function escXml(s) {
   var gallery = $('gallery'), galleryGrid = $('gallery-grid'), galleryTitle = $('gallery-title');
   var galleryZipBtn = $('gallery-zip-btn');
   var isIPhone = /iPhone|iPad/.test(navigator.userAgent);
+
+  function branding() {
+    return $('branding-checkbox').checked ? 'FilmTag by Jeffrey Chu' : '';
+  }
   var summaryPanel = $('summary-panel'), summaryBody = $('summary-body');
   var progressSec = $('progress-section'), progBar = $('progress-bar'), progText = $('progress-text');
   var statusMsg = $('status-msg');
@@ -456,7 +460,8 @@ function escXml(s) {
             exifObj['0th'][piexif.ImageIFD.Make] = p.camera.make;
             exifObj['0th'][piexif.ImageIFD.Model] = p.camera.model;
             exifObj['0th'][piexif.ImageIFD.Artist] = p.author;
-            exifObj['0th'][piexif.ImageIFD.Software] = p.scanner;
+            var brand = branding();
+            exifObj['0th'][piexif.ImageIFD.Software] = brand ? p.scanner + ' (FilmTag by Jeffrey Chu)' : p.scanner;
             exifObj['Exif'][0x828D] = p.process + ' (' + p.pushpull + ')';
 
             var dateTimeStr = seg.exifDate + ' ' + ts.str + '+08:00';
@@ -490,12 +495,14 @@ function escXml(s) {
               (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner);
 
             exifObj['0th'][piexif.ImageIFD.ImageDescription] =
+              (brand ? 'FilmTag by Jeffrey Chu — ' : '') +
               'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name +
               ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') +
               ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
-
             exifObj['0th'][piexif.ImageIFD.Copyright] =
+              (brand ? 'FilmTag by Jeffrey Chu | ' : '') +
               'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
+
 
             var exifBytes = piexif.dump(exifObj);
             var newStr = piexif.insert(exifBytes, jpegStr);
@@ -558,7 +565,8 @@ function escXml(s) {
             exifObj['0th'][piexif.ImageIFD.Make] = p.camera.make;
             exifObj['0th'][piexif.ImageIFD.Model] = p.camera.model;
             exifObj['0th'][piexif.ImageIFD.Artist] = p.author;
-            exifObj['0th'][piexif.ImageIFD.Software] = p.scanner;
+            var brand = branding();
+            exifObj['0th'][piexif.ImageIFD.Software] = brand ? p.scanner + ' (FilmTag by Jeffrey Chu)' : p.scanner;
             var dt = seg.exifDate + ' ' + ts.str + '+08:00';
             exifObj['0th'][piexif.ImageIFD.DateTime] = dt;
             exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = dt;
@@ -586,8 +594,9 @@ function escXml(s) {
               'UNICODE\x00' + toUcs2Binary('Film Stock: ' + p.film.name + ' | Process: ' + p.process + ' | Exposure: ' + p.pushpull + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner);
             exifObj['Exif'][0x828D] = p.process + ' (' + p.pushpull + ')';
             exifObj['0th'][piexif.ImageIFD.ImageDescription] =
+              (brand ? 'FilmTag by Jeffrey Chu — ' : '') +
               'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name + ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
-            exifObj['0th'][piexif.ImageIFD.Copyright] = 'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
+            exifObj['0th'][piexif.ImageIFD.Copyright] = (brand ? 'FilmTag by Jeffrey Chu | ' : '') + 'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
             var exifBytes = piexif.dump(exifObj);
             var newStr = piexif.insert(exifBytes, jpegStr);
             p.dateTime = dt;
