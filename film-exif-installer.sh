@@ -16,39 +16,34 @@ fi
 # ==========================================
 DATA_JSON="${SCRIPT_DIR}/web/data.json"
 
-eval "$(python3 -c "
-import json
-with open('$DATA_JSON') as f:
+eval "$(DATA_JSON="$DATA_JSON" python3 -c '
+import json, os, sys
+with open(os.environ["DATA_JSON"]) as f:
     d = json.load(f)
 
-# Authors
-print('AUTHORS=(' + ' '.join(f'\"{a}\"' for a in d['authors']) + ')')
+print("AUTHORS=(" + " ".join("\"" + a + "\"" for a in d["authors"]) + ")")
 
-# Cameras (flat format: Make|Model)
 cam_entries = []
-for i, c in enumerate(d['cameras']):
-    cam_entries.append(f'\"{c[\"make\"]}|{c[\"model\"]}\"')
-    # Lens array per camera
+for i, c in enumerate(d["cameras"]):
+    cam_entries.append("\"" + c["make"] + "|" + c["model"] + "\"")
     lens_entries = []
-    for l in c['lenses']:
-        lens_entries.append(f'\"{l[\"name\"]}|{l[\"focal\"]}|{l[\"aperture\"]}\"')
+    for l in c["lenses"]:
+        lens_entries.append("\"" + l["name"] + "|" + l["focal"] + "|" + l["aperture"] + "\"")
     if i == 0:
-        print(f'LEICA_LENSES=({' '.join(lens_entries)})')
+        sys.stdout.write("LEICA_LENSES=(" + " ".join(lens_entries) + ")\n")
     elif i == 1:
-        print(f'OLYMPUS_LENSES=({' '.join(lens_entries)})')
+        sys.stdout.write("OLYMPUS_LENSES=(" + " ".join(lens_entries) + ")\n")
     elif i == 2:
-        print(f'LOMOGRAPHY_SIMPLE_USE_LENSES=({' '.join(lens_entries)})')
-print(f'CAMERAS=({' '.join(cam_entries)})')
+        sys.stdout.write("LOMOGRAPHY_SIMPLE_USE_LENSES=(" + " ".join(lens_entries) + ")\n")
+sys.stdout.write("CAMERAS=(" + " ".join(cam_entries) + ")\n")
 
-# Films
-film_entries = [f'\"{f[\"name\"]}|{f[\"iso\"]}\"' for f in d['films']]
-print(f'FILMS=({' '.join(film_entries)})')
+film_entries = ["\"" + f["name"] + "|" + f["iso"] + "\"" for f in d["films"]]
+sys.stdout.write("FILMS=(" + " ".join(film_entries) + ")\n")
 
-# Simple arrays
-for key in ['labs', 'processes', 'pushpulls', 'scanners']:
-    entries = ' '.join(f'\"{v}\"' for v in d[key])
-    print(f'{key.upper()}=({entries})')
-")
+for key in ["labs", "processes", "pushpulls", "scanners"]:
+    entries = " ".join("\"" + v + "\"" for v in d[key])
+    sys.stdout.write(key.upper() + "=(" + entries + ")\n")
+')"
 
 # ==========================================
 # ─── 互動式選單邏輯區 ───
