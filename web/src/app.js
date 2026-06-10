@@ -1,0 +1,457 @@
+import piexif from 'piexifjs';
+import JSZip from 'jszip';
+
+// Inject XMP Label, Credit, and Description into JPEG binary string
+function injectXmp(jpegStr, params, lab, process, scanner) {
+  var xmpXML = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' +
+    '<x:xmpmeta xmlns:x="adobe:ns:meta/">' +
+    '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+    '<rdf:Description rdf:about=""' +
+    ' xmlns:xmp="http://ns.adobe.com/xap/1.0/"' +
+    ' xmlns:dc="http://purl.org/dc/elements/1.1/"' +
+    ' xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">' +
+    '<xmp:Label>' + escXml(params.film.name + ' (' + params.pushpull + ')') + '</xmp:Label>' +
+    '<photoshop:Credit>' + escXml('Processed by ' + lab + ' (' + process + ') | Scanned via ' + scanner) + '</photoshop:Credit>' +
+    '<dc:description>' + escXml('Photo by ' + params.author + ' | Camera: ' + params.camera.model + ' (' + params.lens.name + ') | Film: ' + params.film.name + ' (ISO ' + params.film.iso + ')' + (params.camera.shutter ? ' | Shutter: ' + params.camera.shutter : '') + ' | Lab: ' + lab + ' | Process: ' + process + ' (' + params.pushpull + ') | Scanner: ' + scanner) + '</dc:description>' +
+    '</rdf:Description>' +
+    '</rdf:RDF>' +
+    '</x:xmpmeta>' +
+    '<?xpacket end="w"?>';
+
+  var xmpBytes = 'http://ns.adobe.com/xap/1.0/\x00' + xmpXML;
+  var xmpSegment = '\xFF\xE1' +
+    String.fromCharCode((xmpBytes.length + 2) >> 8, (xmpBytes.length + 2) & 0xFF) +
+    xmpBytes;
+
+  // Remove existing XMP APP1 segments
+  var cleaned = '';
+  var pos = 0;
+  while (pos < jpegStr.length) {
+    if (jpegStr.charCodeAt(pos) === 0xFF && jpegStr.charCodeAt(pos + 1) === 0xE1 &&
+        jpegStr.slice(pos + 4, pos + 33) === 'http://ns.adobe.com/xap/1.0/\x00') {
+      var segLen = (jpegStr.charCodeAt(pos + 2) << 8) | jpegStr.charCodeAt(pos + 3);
+      pos += 2 + segLen;
+    } else {
+      cleaned += jpegStr.charAt(pos);
+      pos++;
+    }
+  }
+
+  // Insert XMP after SOI (FF D8)
+  if (cleaned.charCodeAt(0) === 0xFF && cleaned.charCodeAt(1) === 0xD8) {
+    return cleaned.slice(0, 2) + xmpSegment + cleaned.slice(2);
+  }
+  return cleaned;
+}
+
+function escXml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+(function() {
+  'use strict';
+
+  var LEICA_LENSES = [
+    { name: "Leica Summarit-M 35mm F/2.5", focal: "35", aperture: "2.5" },
+    { name: "Leica Elmarit-M 28mm F/2.8", focal: "28", aperture: "2.8" }
+  ];
+  var OLYMPUS_LENSES = [
+    { name: "OM-System Zuiko 50mm F/1.4", focal: "50", aperture: "1.4" }
+  ];
+  var LOMOGRAPHY_LENSES = [
+    { name: "Plastic Lens 35mm F/9", focal: "35", aperture: "9" }
+  ];
+  var CAMERAS = [
+    { make: "Leica Camera AG", model: "Leica MP", lenses: LEICA_LENSES, shutter: null },
+    { make: "Olympus", model: "Olympus OM-2Sp", lenses: OLYMPUS_LENSES, shutter: null },
+    { make: "Lomography", model: "Lomography Simple Use", lenses: LOMOGRAPHY_LENSES, shutter: "1/120" }
+  ];
+
+  var $ = function(id) { return document.getElementById(id); };
+  var uploadedFiles = [];
+
+  var authorSel = $('author-select'), authorCust = $('author-custom');
+  var cameraSel = $('camera-select'), cameraCust = $('camera-custom');
+  var lensDrop = $('lens-dropdown-group'), lensSel = $('lens-select'), lensCust = $('lens-custom');
+  var filmSel = $('film-select'), filmCust = $('film-custom');
+  var labSel = $('lab-select'), labCust = $('lab-custom');
+  var ppSel = $('pushpull-select'), ppCust = $('pushpull-custom');
+  var scanSel = $('scanner-select'), scanCust = $('scanner-custom');
+  var sameDateSel = $('same-date-select');
+  var singleDG = $('single-date-group'), multiDG = $('multi-date-group');
+  var segContainer = $('seg-container'), segCount = $('seg-file-count'), addSegBtn = $('add-seg-btn');
+  var singleDateInp = $('single-date-input'), singleTimeInp = $('single-time-input');
+  var fileInp = $('file-input'), uploadWrap = $('upload-wrap');
+  var fileListEl = $('file-list'), reviewBtn = $('review-btn');
+  var summaryPanel = $('summary-panel'), summaryBody = $('summary-body');
+  var progressSec = $('progress-section'), progBar = $('progress-bar'), progText = $('progress-text');
+  var statusMsg = $('status-msg');
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function setupCustom(sel, cust) {
+    function toggle() { cust.classList.toggle('show', sel.value === '__custom__'); }
+    sel.addEventListener('change', toggle);
+    toggle();
+  }
+  setupCustom(authorSel, authorCust);
+  setupCustom(cameraSel, cameraCust);
+  setupCustom(labSel, labCust);
+  setupCustom(ppSel, ppCust);
+  setupCustom(scanSel, scanCust);
+  setupCustom(filmSel, filmCust);
+
+  function populateLenses(idx) {
+    lensSel.innerHTML = '';
+    CAMERAS[idx].lenses.forEach(function(l, i) {
+      var o = document.createElement('option'); o.value = i; o.textContent = l.name; lensSel.appendChild(o);
+    });
+    var oo = document.createElement('option');
+    oo.value = '__custom__'; oo.textContent = 'Other (free text)'; lensSel.appendChild(oo);
+  }
+  function updateLensUI() {
+    if (cameraSel.value === '__custom__') {
+      lensDrop.style.display = 'none'; lensCust.classList.add('show');
+    } else {
+      lensDrop.style.display = 'block'; populateLenses(cameraSel.selectedIndex);
+      lensCust.classList.toggle('show', lensSel.value === '__custom__');
+    }
+  }
+  cameraSel.addEventListener('change', updateLensUI);
+  lensSel.addEventListener('change', function() {
+    if (cameraSel.value === '__custom__') return;
+    lensCust.classList.toggle('show', lensSel.value === '__custom__');
+  });
+
+  sameDateSel.addEventListener('change', function() {
+    if (sameDateSel.value === 'yes') { singleDG.style.display = 'block'; multiDG.style.display = 'none'; }
+    else {
+      singleDG.style.display = 'none'; multiDG.style.display = 'block';
+      if (segContainer.children.length === 0) addSegment();
+      refreshSegments();
+    }
+  });
+
+  function makeSegCard(start) {
+    var total = uploadedFiles.length || 36;
+    var defEnd = Math.min(start + 35, total);
+    var card = document.createElement('div');
+    card.className = 'segment-card';
+    card.innerHTML =
+      '<div class="seg-label">Files <span class="s1">' + start + '</span> – <span class="s2">' + defEnd + '</span></div>' +
+      '<div style="margin-bottom:0.5rem;"><label>End file index</label>' +
+      '<input type="number" class="seg-end" min="' + start + '" max="' + total + '" value="' + defEnd + '"></div>' +
+      '<div class="field-group">' +
+      '<div><label>Shoot Date</label><input type="date" class="seg-date"></div>' +
+      '<div><label>Start Time (24h)</label><input type="time" class="seg-time" value="12:00"></div>' +
+      '</div>' +
+      '<button class="btn btn-danger" style="margin-top:0.5rem;" type="button">Remove</button>';
+    card.querySelector('.seg-end').addEventListener('change', refreshSegments);
+    card.querySelector('button').addEventListener('click', function() { card.remove(); refreshSegments(); });
+    return card;
+  }
+
+  function refreshSegments() {
+    var total = uploadedFiles.length || 36;
+    var cards = segContainer.querySelectorAll('.segment-card');
+    var cum = 0;
+    for (var i = 0; i < cards.length; i++) {
+      var se = cards[i].querySelector('.seg-end');
+      var ev = parseInt(se.value, 10);
+      if (isNaN(ev) || ev <= 0) ev = total;
+      var st = cum + 1; if (ev < st) ev = st; if (ev > total) ev = total;
+      se.value = ev; se.min = st; se.max = total;
+      cards[i].querySelector('.s1').textContent = st;
+      cards[i].querySelector('.s2').textContent = ev;
+      cards[i].querySelector('.seg-label').textContent = 'Files ' + st + ' – ' + ev;
+      cum = ev;
+    }
+    segCount.textContent = uploadedFiles.length > 0 ? 'Total: ' + uploadedFiles.length + ' file(s) uploaded' : '';
+    renderFileList();
+    reviewBtn.disabled = uploadedFiles.length === 0;
+  }
+
+  function addSegment() {
+    var cards = segContainer.querySelectorAll('.segment-card');
+    var st = cards.length === 0 ? 1 : (parseInt(cards[cards.length - 1].querySelector('.seg-end').value, 10) || (uploadedFiles.length || 36)) + 1;
+    segContainer.appendChild(makeSegCard(st));
+    refreshSegments();
+  }
+  addSegBtn.addEventListener('click', addSegment);
+  singleDateInp.valueAsDate = new Date();
+
+  fileInp.addEventListener('change', function(e) { handleFiles(e.target.files); fileInp.value = ''; });
+  uploadWrap.addEventListener('dragover', function(e) { e.preventDefault(); uploadWrap.classList.add('dragover'); });
+  uploadWrap.addEventListener('dragleave', function() { uploadWrap.classList.remove('dragover'); });
+  uploadWrap.addEventListener('drop', function(e) { e.preventDefault(); uploadWrap.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+
+  function handleFiles(files) {
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!uploadedFiles.some(function(x) { return x.file.name === f.name && x.file.size === f.size; })) {
+        uploadedFiles.push({ file: f });
+      }
+    }
+    uploadedFiles.sort(function(a, b) { return a.file.name.localeCompare(b.file.name); });
+    refreshSegments();
+  }
+
+  function renderFileList() {
+    if (uploadedFiles.length === 0) { fileListEl.innerHTML = ''; reviewBtn.disabled = true; segCount.textContent = ''; return; }
+    segCount.textContent = 'Total: ' + uploadedFiles.length + ' file(s) uploaded';
+    var h = '<div class="file-list-header"><span>' + uploadedFiles.length + ' file(s)</span>' +
+      '<button class="btn btn-sm btn-danger" onclick="clearAll()">Clear All</button></div>';
+    for (var i = 0; i < uploadedFiles.length; i++) {
+      var f = uploadedFiles[i];
+      h += '<div class="file-item">' +
+        '<div class="fidx">#' + String(i + 1).padStart(2, '0') + '</div>' +
+        '<div class="fname">' + esc(f.file.name) + '</div>' +
+        '<div class="fsize">' + fmtSize(f.file.size) + '</div>' +
+        '<button class="remove-btn" onclick="removeOne(' + i + ')">✕</button>' +
+        '</div>';
+    }
+    fileListEl.innerHTML = h;
+    reviewBtn.disabled = uploadedFiles.length === 0;
+  }
+
+  function clearAll() { uploadedFiles = []; refreshSegments(); }
+  function removeOne(i) { uploadedFiles.splice(i, 1); refreshSegments(); }
+  window.clearAll = clearAll; window.removeOne = removeOne;
+
+  function selText(sel) { return sel.options[sel.selectedIndex].text; }
+  function getVal(sel, inp) { return sel.value === '__custom__' ? inp.value.trim() : selText(sel); }
+  function camInfo() {
+    if (cameraSel.value === '__custom__') return { make: $('camera-make-custom').value.trim() || 'Unknown', model: $('camera-model-custom').value.trim() || 'Unknown', shutter: null };
+    var c = CAMERAS[cameraSel.selectedIndex]; return { make: c.make, model: c.model, shutter: c.shutter };
+  }
+  function lensInfo() {
+    if (cameraSel.value === '__custom__' || lensSel.value === '__custom__')
+      return { name: $('lens-name-custom').value.trim(), focal: $('lens-focal').value.trim(), aperture: $('lens-aperture').value.trim() };
+    var l = CAMERAS[cameraSel.selectedIndex].lenses[lensSel.selectedIndex];
+    return { name: l.name, focal: l.focal, aperture: l.aperture };
+  }
+  function filmInfo() {
+    if (filmSel.value === '__custom__') return { name: $('film-name-custom').value.trim(), iso: $('film-iso-custom').value.trim() };
+    var o = filmSel.options[filmSel.selectedIndex];
+    return { name: o.textContent, iso: o.getAttribute('data-iso') };
+  }
+  function collect() {
+    return {
+      author: getVal(authorSel, $('author-custom-input')), camera: camInfo(), lens: lensInfo(),
+      film: filmInfo(), lab: getVal(labSel, $('lab-custom-input')), process: selText($('process-select')),
+      pushpull: getVal(ppSel, $('pushpull-custom-input')), scanner: getVal(scanSel, $('scanner-custom-input'))
+    };
+  }
+  function validate(p) {
+    if (!p.author) return 'Author is required'; if (!p.lens.name) return 'Lens name is required';
+    if (!p.film.name) return 'Film stock is required'; if (!p.lab) return 'Lab is required';
+    if (!p.scanner) return 'Scanner is required'; return null;
+  }
+  function getSegments(total) {
+    if (sameDateSel.value === 'yes') {
+      var dv = singleDateInp.value, tv = singleTimeInp.value;
+      if (!dv) return null;
+      var ed = dv.replace(/-/g, ':'), fd = dv.replace(/-/g, '');
+      var p = tv.split(':'), h = parseInt(p[0], 10) || 0, m = parseInt(p[1], 10) || 0;
+      return [{ start: 1, end: total > 0 ? total : 36, fileDate: fd, exifDate: ed, startHour: h, startMin: m }];
+    }
+    var cards = segContainer.querySelectorAll('.segment-card');
+    if (!cards.length) return null;
+    var sgs = [];
+    for (var i = 0; i < cards.length; i++) {
+      var de = cards[i].querySelector('.seg-date'), te = cards[i].querySelector('.seg-time');
+      if (!de.value || !te.value) return null;
+      var ed2 = de.value.replace(/-/g, ':'), fd2 = de.value.replace(/-/g, '');
+      var p2 = te.value.split(':'), h2 = parseInt(p2[0], 10) || 0, m2 = parseInt(p2[1], 10) || 0;
+      sgs.push({ start: sgs.length ? sgs[sgs.length - 1].end + 1 : 1, end: parseInt(cards[i].querySelector('.seg-end').value, 10) || total,
+        fileDate: fd2, exifDate: ed2, startHour: h2, startMin: m2 });
+    }
+    return sgs.length ? sgs : null;
+  }
+  function segForIdx(sgs, idx) { for (var i = 0; i < sgs.length; i++) { if (idx >= sgs[i].start && idx <= sgs[i].end) return sgs[i]; } return sgs[0]; }
+  function calcTS(seg, idx) {
+    var off = idx - seg.start, min = seg.startMin + off, hr = seg.startHour + Math.floor(min / 60);
+    min %= 60; hr %= 24;
+    return { hr: hr, min: min, str: String(hr).padStart(2, '0') + ':' + String(min).padStart(2, '0') + ':00' };
+  }
+  function newFName(film, seg, idx, hr, min, ext) {
+    var c = film
+      .split(/[^a-zA-Z0-9]+/)
+      .filter(function(w) { return w.length > 0; })
+      .map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); })
+      .join('');
+    return c + '_' + seg.fileDate + String(hr).padStart(2, '0') + String(min).padStart(2, '0') + '_' + String(idx).padStart(2, '0') + '.' + ext;
+  }
+
+  reviewBtn.addEventListener('click', function() {
+    var p = collect();
+    var err = validate(p); if (err) { showStatus(err, 'error'); return; }
+    var sgs = getSegments(uploadedFiles.length);
+    if (!sgs) { showStatus('Date is required', 'error'); return; }
+
+    var html = '';
+    html += '<div class="summary-section"><h3>Settings</h3>';
+    var rows = [
+      ['Author', p.author], ['Camera', p.camera.make + ' ' + p.camera.model],
+      ['Lens', p.lens.name + (p.lens.focal ? ' (' + p.lens.focal + 'mm)' : '') + (p.lens.aperture ? ' F/' + p.lens.aperture : '')],
+      ['Film', p.film.name + ' (ISO ' + p.film.iso + ')'], ['Lab', p.lab],
+      ['Process', p.process + ' (' + p.pushpull + ')'], ['Scanner', p.scanner]
+    ];
+    if (p.camera.shutter) rows.push(['Shutter', p.camera.shutter]);
+    for (var i = 0; i < rows.length; i++) html += '<div class="summary-row"><span class="k">' + rows[i][0] + '</span><span class="v">' + esc(rows[i][1]) + '</span></div>';
+    html += '</div>';
+
+    html += '<div class="summary-section"><h3>Files (' + uploadedFiles.length + ')</h3>';
+    html += '<table class="rename-table"><tr><th>#</th><th>Original</th><th>New Name</th></tr>';
+    for (var j = 0; j < uploadedFiles.length; j++) {
+      var idx = j + 1, seg2 = segForIdx(sgs, idx), ts = calcTS(seg2, idx);
+      var ext = uploadedFiles[j].file.name.split('.').pop().toLowerCase();
+      var nn = newFName(p.film.name, seg2, idx, ts.hr, ts.min, ext);
+      html += '<tr><td style="color:#555;">' + idx + '</td><td class="old-name">' + esc(uploadedFiles[j].file.name) + '</td><td class="new-name">' + esc(nn) + '</td></tr>';
+    }
+    html += '</table></div>';
+    html += '<div class="actions" style="margin-top:1rem;"><button class="btn btn-primary" id="confirm-btn">Process & Download ZIP</button></div>';
+
+    summaryBody.innerHTML = html;
+    summaryPanel.classList.add('show');
+    summaryPanel.scrollIntoView({ behavior: 'smooth' });
+    $('confirm-btn').addEventListener('click', startProcess);
+  });
+
+  $('summary-close-btn').addEventListener('click', function() { summaryPanel.classList.remove('show'); });
+
+  function startProcess() {
+    summaryPanel.classList.remove('show');
+    var p = collect(), sgs = getSegments(uploadedFiles.length);
+    if (!sgs) return showStatus('Date error', 'error');
+
+    reviewBtn.disabled = true;
+    progressSec.style.display = 'block';
+    statusMsg.className = 'status-msg'; statusMsg.style.display = 'none';
+
+    var total = uploadedFiles.length, zip = new JSZip();
+
+    function doOne(i) {
+      if (i >= total) {
+        progText.textContent = 'Creating ZIP...';
+        zip.generateAsync({ type: 'blob' }).then(function(blob) {
+          var url = URL.createObjectURL(blob), a = document.createElement('a');
+          a.href = url;
+          a.download = 'film_exif_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.zip';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+          progBar.style.width = '100%'; progText.textContent = 'Done! ' + total + ' file(s) processed.';
+          showStatus(total + ' file(s) processed successfully', 'success');
+          reviewBtn.disabled = false;
+          setTimeout(function() { progressSec.style.display = 'none'; progBar.style.width = '0%'; }, 3000);
+        });
+        return;
+      }
+      var entry = uploadedFiles[i], idx = i + 1, seg = segForIdx(sgs, idx);
+      var ts = calcTS(seg, idx), ext = entry.file.name.split('.').pop().toLowerCase();
+      var nn = newFName(p.film.name, seg, idx, ts.hr, ts.min, ext);
+
+      progBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
+      progText.textContent = 'Processing ' + (i + 1) + ' of ' + total;
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var bytes = new Uint8Array(e.target.result);
+
+        if (ext === 'jpg' || ext === 'jpeg') {
+          try {
+            var jpegStr = '';
+            for (var b = 0; b < bytes.length; b++) jpegStr += String.fromCharCode(bytes[b]);
+
+            var exifObj;
+            try { exifObj = piexif.load(jpegStr); } catch(_) {
+              exifObj = { '0th': {}, 'Exif': {}, 'GPS': {}, 'Interop': {}, '1st': {}, 'thumbnail': null };
+            }
+
+            exifObj['0th'][piexif.ImageIFD.Make] = p.camera.make;
+            exifObj['0th'][piexif.ImageIFD.Model] = p.camera.model;
+            exifObj['0th'][piexif.ImageIFD.Artist] = p.author;
+            exifObj['0th'][piexif.ImageIFD.Software] = p.scanner;
+
+            var dateTimeStr = seg.exifDate + ' ' + ts.str;
+            exifObj['0th'][piexif.ImageIFD.DateTime] = dateTimeStr;
+            exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = dateTimeStr;
+            exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized] = dateTimeStr;
+            exifObj['Exif'][piexif.ExifIFD.ISOSpeedRatings] = parseInt(p.film.iso, 10) || 400;
+            exifObj['Exif'][piexif.ExifIFD.LensModel] = p.lens.name;
+
+            if (p.lens.focal) {
+              var fl = parseFloat(p.lens.focal);
+              exifObj['Exif'][piexif.ExifIFD.FocalLength] = Number.isInteger(fl) ? [fl, 1] : [Math.round(fl * 100), 100];
+            }
+            if (p.lens.aperture) {
+              var ap = Math.round(parseFloat(p.lens.aperture) * 100);
+              exifObj['Exif'][piexif.ExifIFD.FNumber] = [ap, 100];
+              exifObj['Exif'][piexif.ExifIFD.MaxApertureValue] = [ap, 100];
+              exifObj['Exif'][piexif.ExifIFD.ApertureValue] = [ap, 100];
+            }
+            if (p.camera.shutter) {
+              var sf = p.camera.shutter.split('/');
+              if (sf.length === 2) {
+                exifObj['Exif'][piexif.ExifIFD.ExposureTime] = [parseInt(sf[0], 10), parseInt(sf[1], 10)];
+                exifObj['Exif'][piexif.ExifIFD.ShutterSpeedValue] = [parseInt(sf[0], 10), parseInt(sf[1], 10)];
+              }
+            }
+
+            exifObj['Exif'][piexif.ExifIFD.UserComment] = ['ASCII',
+              'Film Stock: ' + p.film.name + ' | Process: ' + p.process + ' | Exposure: ' + p.pushpull +
+              (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') + ' | Scanner: ' + p.scanner];
+
+            exifObj['0th'][piexif.ImageIFD.ImageDescription] =
+              'Photo by ' + p.author + ' | Camera: ' + p.camera.model + ' (' + p.lens.name + ') | Film: ' + p.film.name +
+              ' (ISO ' + p.film.iso + ')' + (p.camera.shutter ? ' | Shutter: ' + p.camera.shutter : '') +
+              ' | Lab: ' + p.lab + ' | Process: ' + p.process + ' (' + p.pushpull + ') | Scanner: ' + p.scanner;
+
+            exifObj['0th'][piexif.ImageIFD.Copyright] =
+              'Processed by ' + p.lab + ' (' + p.process + ') | Scanned via ' + p.scanner;
+
+            var exifBytes = piexif.dump(exifObj);
+            var newStr = piexif.insert(exifBytes, jpegStr);
+            newStr = injectXmp(newStr, p, p.lab, p.process, p.scanner);
+            bytes = new Uint8Array(newStr.length);
+            for (var b2 = 0; b2 < newStr.length; b2++) bytes[b2] = newStr.charCodeAt(b2) & 0xFF;
+          } catch(err) { console.warn('EXIF write failed', err); }
+        }
+
+        zip.file(nn, bytes, { binary: true });
+        doOne(i + 1);
+      };
+      reader.readAsArrayBuffer(entry.file);
+    }
+    doOne(0);
+  }
+
+  function showStatus(msg, type) {
+    statusMsg.textContent = msg; statusMsg.className = 'status-msg ' + type; statusMsg.style.display = 'block';
+  }
+
+  $('reset-btn').addEventListener('click', function() {
+    var ss = document.querySelectorAll('select');
+    for (var i = 0; i < ss.length; i++) { ss[i].selectedIndex = 0; ss[i].dispatchEvent(new Event('change')); }
+    var ins = document.querySelectorAll('input[type="text"], input[type="number"]');
+    for (var j = 0; j < ins.length; j++) ins[j].value = '';
+    singleDateInp.valueAsDate = new Date(); singleTimeInp.value = '12:00';
+    sameDateSel.value = 'yes'; sameDateSel.dispatchEvent(new Event('change'));
+    segContainer.innerHTML = ''; uploadedFiles = [];
+    summaryPanel.classList.remove('show'); summaryBody.innerHTML = '';
+    progressSec.style.display = 'none'; progBar.style.width = '0%';
+    statusMsg.className = 'status-msg'; statusMsg.style.display = 'none';
+    updateLensUI(); refreshSegments();
+  });
+
+  updateLensUI();
+})();

@@ -1,5 +1,7 @@
 .history
 .DS_Store
+web/node_modules/
+web/dist/
 
 # 忽略 gphotos-config 資料夾內的所有運行暫存與實體私鑰
 gphotos-config/*

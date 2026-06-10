@@ -1,6 +1,6 @@
 # Exif Shell Script 工具集
 
-本專案提供一組用於處理相片 EXIF 中繼資料、自動重新命名與雲端同步上傳的 Zsh 腳本工具。專案採用極簡架構，將核心功能收斂為兩大工具，並全面整合 Google Photos 雲端備份自動化流程。
+本專案提供一組用於處理相片 EXIF 中繼資料、自動重新命名與雲端同步上傳的 Zsh 腳本工具，以及一個互動式 Web 版本。
 
 ---
 
@@ -12,6 +12,14 @@ exif-shell-script/
 ├── README.md                   # 本說明文件
 ├── film-exif-installer.sh      # 菲林中繼資料批次寫入暨命名工具（整合上傳功能）
 ├── fix-sony-hif-orientation.sh # Sony HIF/HEIC 方向遞迴修正工具（整合上傳功能）
+├── web/                        # 🌐 互動式 Web 版本（npm 專案，可部署至 Vercel）
+│   ├── package.json            # npm 設定與依賴
+│   ├── vercel.json             # Vercel 部署配置
+│   ├── public/
+│   │   └── index.html          # 靜態 HTML 頁面
+│   ├── src/
+│   │   └── app.js              # ES Module 應用邏輯（piexifjs + JSZip）
+│   └── dist/                   # esbuild 打包輸出（部署用）
 └── gphotos-config/             # 🪺 Google Photos 同步配置專用資料夾
     ├── config.example.hjson    # 設定檔範本（可公開推至 GitHub）
     ├── config.hjson            # 實體私密設定檔（安全隔離，Git 自動忽略）
@@ -19,6 +27,37 @@ exif-shell-script/
     ├── uploaded_files/         # 已成功上傳的檔案去重資料庫（Git 自動忽略）
     └── ongoing_uploads/        # 斷點續傳暫存快取區（Git 自動忽略）
 ```
+
+## 🌐 Web 版本 (`web/`)
+
+互動式單頁應用，所有 EXIF 處理在瀏覽器端完成。功能與 `film-exif-installer.sh` 完全一致。
+
+### 功能
+- **上傳相片**：拖放或點選上傳 JPEG/TIFF/DNG/PNG
+- **參數設定**：所有選項與 Shell 版本相同（下拉選單 + Free text）
+- **多日期分段**：支援不同拍攝日期與獨立起始時間
+- **預覽摘要**：處理前顯示完整設定與檔案重新命名對照表
+- **EXIF 寫入**：Make, Model, Artist, ISO, LensModel, DateTime, FocalLength, FNumber, Aperture, Shutter, UserComment, ImageDescription, Copyright 以及 XMP Label / Credit / Description
+- **批次下載**：所有處理完成的檔案打包為 ZIP，檔案命名格式與 Shell 版本一致
+
+### 技術棧
+- **piexifjs** — 瀏覽器端 EXIF 讀寫
+- **JSZip** — 瀏覽器端 ZIP 打包
+- **esbuild** — 打包工具
+- **Vercel** — 部署平台
+
+### 本地開發
+```bash
+cd web
+npm install
+npm run build
+npm run dev       # 啟動 http://localhost:3333
+```
+
+### 部署至 Vercel
+1. Push 至 GitHub
+2. 在 Vercel 中 import repo，Root Directory 設為 `web`
+3. Vercel 自動執行 `npm run build`，部署 `dist/` 目錄
 
 ## 📦 Homebrew 依賴套件
 
