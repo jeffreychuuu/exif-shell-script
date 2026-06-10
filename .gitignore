@@ -2,8 +2,15 @@
 .DS_Store
 web/node_modules/
 web/dist/
+*.jpg
+*.jpeg
+*.png
+*.tiff
+*.dng
+*.heic
+*.hif
 
 # 忽略 gphotos-config 資料夾內的所有運行暫存與實體私鑰
 gphotos-config/*
 # 唯獨放行範本檔案，讓它可以被推上 GitHub
-!gphotos-config/config.example.hjson*.jpg
+!gphotos-config/config.example.hjson
