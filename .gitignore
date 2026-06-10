@@ -2,6 +2,7 @@
 .DS_Store
 web/node_modules/
 web/dist/
+web/data.zsh
 *.jpg
 *.jpeg
 *.png

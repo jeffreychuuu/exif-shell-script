@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "esbuild src/app.js --bundle --outfile=dist/bundle.js && cp public/index.html dist/index.html",
-    "dev": "esbuild src/app.js --bundle --outfile=dist/bundle.js && cp public/index.html dist/index.html && python3 -m http.server 3333 --directory dist"
+    "build": "node generate-data-zsh.js && esbuild src/app.js --bundle --outfile=dist/bundle.js && cp public/index.html dist/index.html && cp data.zsh dist/data.zsh",
+    "dev": "node generate-data-zsh.js && esbuild src/app.js --bundle --outfile=dist/bundle.js && cp public/index.html dist/index.html && python3 -m http.server 3333 --directory dist"
   },
   "dependencies": {
     "jszip": "^3.10.1",
