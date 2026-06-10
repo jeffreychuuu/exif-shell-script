@@ -616,13 +616,13 @@ function escXml(s) {
         item.className = 'gallery-item';
 
         var canvas = document.createElement('canvas');
-        canvas.width = 200; canvas.height = 200;
+        canvas.width = 150; canvas.height = 150;
         var ctx = canvas.getContext('2d');
         var img = new Image();
         img.onload = function() {
-          var scale = Math.min(200 / img.width, 200 / img.height);
+          var scale = Math.min(150 / img.width, 150 / img.height);
           var w = img.width * scale, h = img.height * scale;
-          ctx.drawImage(img, (200 - w) / 2, (200 - h) / 2, w, h);
+          ctx.drawImage(img, (150 - w) / 2, (150 - h) / 2, w, h);
         };
         img.src = URL.createObjectURL(f.blob);
         item.appendChild(canvas);
